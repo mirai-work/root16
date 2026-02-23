@@ -58,7 +58,7 @@ class App:
 
     def update(self):
         if self.state == STATE_TITLE:
-            if pyxel.btnp(pyxel.KEY_SPACE): self.score, self.stage, self.total_time = 0, 1, 0; self.state = STATE_TUTORIAL
+            if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A): self.score, self.stage, self.total_time = 0, 1, 0; self.state = STATE_TUTORIAL
         elif self.state == STATE_TUTORIAL:
             if pyxel.btnp(pyxel.KEY_SPACE): self.init_stage(); self.state = STATE_PLAY
         elif self.state == STATE_PLAY: self.update_play()
@@ -84,8 +84,8 @@ class App:
             if t["life"] <= 0: self.trails.remove(t)
         mv = (2.4 if turbo else 1.6) if self.stage == 2 else (2.1 if turbo else 1.3)
         dx, dy = 0, 0
-        if pyxel.btn(pyxel.KEY_UP): dy = -mv
-        elif pyxel.btn(pyxel.KEY_DOWN): dy = mv
+        if pyxel.btn(pyxel.KEY_UP) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_UP): dy = -mv
+        elif pyxel.btn(pyxel.KEY_DOWN) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DOWN): dy = mv
         if pyxel.btn(pyxel.KEY_LEFT): dx = -mv
         elif pyxel.btn(pyxel.KEY_RIGHT): dx = mv
         if not self.get_wall(self.px + dx, self.py): self.px += dx
@@ -219,3 +219,4 @@ class App:
         elif t == "P": pyxel.circb(x, y, 3, 12)
 
 App()
+
