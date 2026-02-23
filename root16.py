@@ -58,19 +58,19 @@ class App:
 
     def update(self):
         if self.state == STATE_TITLE:
-            if pyxel.btnp(pyxel.KEY_SPACE): self.score, self.stage, self.total_time = 0, 1, 0; self.state = STATE_TUTORIAL
+            if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_SPACE): self.score, self.stage, self.total_time = 0, 1, 0; self.state = STATE_TUTORIAL
         elif self.state == STATE_TUTORIAL:
-            if pyxel.btnp(pyxel.KEY_SPACE): self.init_stage(); self.state = STATE_PLAY
+            if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_SPACE): self.init_stage(); self.state = STATE_PLAY
         elif self.state == STATE_PLAY: self.update_play()
         elif self.state == STATE_CLEAR:
-            if pyxel.btnp(pyxel.KEY_SPACE):
+            if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_SPACE):
                 if self.stage >= 5: self.state = STATE_ENDING; self.ending_timer = 0
                 else: self.stage += 1; self.init_stage(); self.state = STATE_PLAY # 直接次の面へ
         elif self.state == STATE_ENDING:
             self.ending_timer += 1
-            if self.ending_timer > 60 and pyxel.btnp(pyxel.KEY_SPACE): self.state = STATE_TITLE
+            if self.ending_timer > 60 and pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_SPACE): self.state = STATE_TITLE
         elif self.state == STATE_GAMEOVER:
-            if pyxel.btnp(pyxel.KEY_SPACE): self.state = STATE_TITLE
+            if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_SPACE): self.state = STATE_TITLE
 
     def update_play(self):
         self.total_time += 1
@@ -84,10 +84,10 @@ class App:
             if t["life"] <= 0: self.trails.remove(t)
         mv = (2.4 if turbo else 1.6) if self.stage == 2 else (2.1 if turbo else 1.3)
         dx, dy = 0, 0
-        if pyxel.btn(pyxel.KEY_UP): dy = -mv
-        elif pyxel.btn(pyxel.KEY_DOWN): dy = mv
-        if pyxel.btn(pyxel.KEY_LEFT): dx = -mv
-        elif pyxel.btn(pyxel.KEY_RIGHT): dx = mv
+        if pyxel.btn(pyxel.KEY_UP) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_UP): dy = -mv
+        elif pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN): dy = mv
+        if pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT): dx = -mv
+        elif pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT): dx = mv
         if not self.get_wall(self.px + dx, self.py): self.px += dx
         if not self.get_wall(self.px, self.py + dy): self.py += dy
         for e in self.enemies:
@@ -217,5 +217,6 @@ class App:
         if t == "G": pyxel.text(x-2, y-2, "$", 10)
         elif t == "F": pyxel.text(x-2, y-2, "F", 11)
         elif t == "P": pyxel.circb(x, y, 3, 12)
+
 
 App()
