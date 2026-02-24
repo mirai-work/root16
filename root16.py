@@ -56,21 +56,8 @@ class App:
             ex, ey = self.find_safe_pos(random.randint(1,3), random.randint(1,3))
             self.enemies.append({"x": ex, "y": ey, "dx": 0, "dy": 0, "active": True, "speed": speed})
 
-    def update(self):
-        if self.state == STATE_TITLE:
-            if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A): self.score, self.stage, self.total_time = 0, 1, 0; self.state = STATE_TUTORIAL
-        elif self.state == STATE_TUTORIAL:
-            if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A): self.init_stage(); self.state = STATE_PLAY
-        elif self.state == STATE_PLAY: self.update_play()
-        elif self.state == STATE_CLEAR:
-            if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A):
-                if self.stage >= 5: self.state = STATE_ENDING; self.ending_timer = 0
-                else: self.stage += 1; self.init_stage(); self.state = STATE_PLAY # 直接次の面へ
-        elif self.state == STATE_ENDING:
-            self.ending_timer += 1
-            if self.ending_timer > 60 and pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A): self.state = STATE_TITLE
-        elif self.state == STATE_GAMEOVER:
-            if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A): self.state = STATE_TITLE
+    def decide_pressed(self):
+        return pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A)
 
     def update_play(self):
         self.total_time += 1
@@ -219,6 +206,7 @@ class App:
         elif t == "P": pyxel.circb(x, y, 3, 12)
 
 App()
+
 
 
 
