@@ -25,6 +25,8 @@ class App:
         self.state = STATE_TITLE
         self.score, self.stage, self.total_time = 0, 1, 0
         self.trails, self.popups = [], []
+        self.px = 0
+        self.py = 0
         pyxel.run(self.update, self.draw)
 
     def get_current_maze(self): return MAZE_DATA[self.stage]
@@ -203,5 +205,6 @@ class App:
         elif t == "P": pyxel.circb(x, y, 3, 12)
 
 App()
+
 
 
