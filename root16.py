@@ -60,21 +60,21 @@ class App:
         if self.state == STATE_TITLE:
             if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A): self.score, self.stage, self.total_time = 0, 1, 0; self.state = STATE_TUTORIAL
         elif self.state == STATE_TUTORIAL:
-            if pyxel.btnp(pyxel.KEY_SPACE): self.init_stage(); self.state = STATE_PLAY
+            if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A): self.init_stage(); self.state = STATE_PLAY
         elif self.state == STATE_PLAY: self.update_play()
         elif self.state == STATE_CLEAR:
-            if pyxel.btnp(pyxel.KEY_SPACE):
+            if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A):
                 if self.stage >= 5: self.state = STATE_ENDING; self.ending_timer = 0
                 else: self.stage += 1; self.init_stage(); self.state = STATE_PLAY # 直接次の面へ
         elif self.state == STATE_ENDING:
             self.ending_timer += 1
-            if self.ending_timer > 60 and pyxel.btnp(pyxel.KEY_SPACE): self.state = STATE_TITLE
+            if self.ending_timer > 60 and pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A): self.state = STATE_TITLE
         elif self.state == STATE_GAMEOVER:
-            if pyxel.btnp(pyxel.KEY_SPACE): self.state = STATE_TITLE
+            if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A): self.state = STATE_TITLE
 
     def update_play(self):
         self.total_time += 1
-        turbo = pyxel.btn(pyxel.KEY_LSHIFT)
+        turbo = pyxel.btn(pyxel.KEY_LSHIFT) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B)
         self.fuel -= 0.18 if turbo else 0.08
         if self.fuel <= 0: self.state = STATE_GAMEOVER
         if self.power_timer > 0: self.power_timer -= 1
@@ -219,4 +219,5 @@ class App:
         elif t == "P": pyxel.circb(x, y, 3, 12)
 
 App()
+
 
