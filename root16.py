@@ -26,7 +26,12 @@ class App:
         self.score, self.stage, self.total_time = 0, 1, 0
         self.trails, self.popups = [], []
         pyxel.run(self.update, self.draw)
+    def update(self):
+        pass
 
+    def draw(self):
+        pyxel.cls(0)
+        
     # 決定ボタン（SPACE or GAMEPAD A）
     def decide_pressed(self):
         return pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A)
@@ -266,3 +271,4 @@ class App:
 
 
 App()
+
