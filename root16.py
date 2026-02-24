@@ -4,7 +4,7 @@ import random
 # --- 定数 ---
 SCREEN_SIZE = 128
 WORLD_SIZE = 256
-STATE_TITLE, STATE_TUTORIAL, STATE_PLAY, STATE_CLEAR, STATE_GAMEOVER, STATE_ENDING = range(6)
+STATE_TITLE, STATE_PLAY, STATE_CLEAR, STATE_GAMEOVER, STATE_ENDING = range(5)
 
 MAZE_DATA = {
     1: [[1,1,0,0,0,0,1,1],[1,0,0,0,0,0,0,1],[0,0,0,1,1,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,1,1,0,0,0],[1,0,0,0,0,0,0,1],[1,1,0,0,0,0,1,1]],
@@ -116,7 +116,6 @@ class App:
             pyxel.blt(0, 0, 0, 0, 0, 128, 128)
             self.draw_text_border(30, 40, "ROUTE  ULTIMATE", 7)
             self.draw_text_border(35, 100, "PUSH SPACE KEY", 10)
-        elif self.state == STATE_TUTORIAL: self.draw_tutorial()
         elif self.state == STATE_PLAY:
             lx, ly = self.px % 64, self.py % 64
             if not (8 < lx < 56 and 8 < ly < 56): self.draw_radar()
@@ -204,3 +203,4 @@ class App:
         elif t == "P": pyxel.circb(x, y, 3, 12)
 
 App()
+
