@@ -59,8 +59,6 @@ class App:
     def update(self):
         if self.state == STATE_TITLE:
             if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A): self.score, self.stage, self.total_time = 0, 1, 0; self.state = STATE_TUTORIAL
-        elif self.state == STATE_TUTORIAL:
-            if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A): self.init_stage(); self.state = STATE_PLAY
         elif self.state == STATE_PLAY: self.update_play()
         elif self.state == STATE_CLEAR:
             if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A):
@@ -189,19 +187,6 @@ class App:
         pyxel.text(68, 133, f"T:{self.total_time // 30}s", 7) # タイム
         pyxel.text(98, 133, f"S:{self.score}", 10 if self.score >= 5000 else 7) # スコア
 
-    def draw_tutorial(self):
-        pyxel.rectb(5, 5, 118, 118, 7)
-        pyxel.text(40, 12, "- MISSIONS -", 10)
-        txt = [
-            "1. COLLECT ALL COINS", "   IN EACH STAGE.", "",
-            "2. WATCH FUEL BAR.", "   COLLECT 'F' TO REFILL.", "",
-            "3. GET 'P' TO BECOME", "   INVINCIBLE!", "",
-            "4. AVOID POLICE CARS.", "",
-            "MOVE : ARROW KEYS", "TURBO: SHIFT KEY"
-        ]
-        for i, line in enumerate(txt): pyxel.text(12, 28 + i * 7, line, 7)
-        if (pyxel.frame_count // 15) % 2: pyxel.text(32, 130, "PRESS SPACE KEY", 6)
-
     def draw_ending(self):
         pyxel.cls(0)
         self.draw_text_border(30, 30, "MISSION COMPLETE!", pyxel.frame_count % 16)
@@ -219,5 +204,3 @@ class App:
         elif t == "P": pyxel.circb(x, y, 3, 12)
 
 App()
-
-
