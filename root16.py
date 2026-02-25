@@ -28,6 +28,7 @@ class App:
         pyxel.mouse(False)
         
         self.state = STATE_TITLE
+        self.ready_to_start = False  # 追加：2ステップ開始用フラグ
         self.score, self.stage, self.total_time = 0, 1, 0
         self.trails, self.popups, self.ending_timer = [], [], 0
         
@@ -61,9 +62,8 @@ class App:
         return dx, dy, turbo
 
     def is_confirm_pressed(self):
-        # btnp（押した瞬間）ではなく btnr（離した瞬間）に変更して突き抜けを防止
-        return pyxel.btnr(pyxel.KEY_SPACE) or pyxel.btnr(pyxel.GAMEPAD1_BUTTON_B) or \
-               (pyxel.btnr(pyxel.MOUSE_BUTTON_LEFT) and pyxel.mouse_y < 144)
+        return pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B) or \
+               (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT) and pyxel.mouse_y < 144)
 
     def get_current_maze(self): return MAZE_DATA[self.stage]
     def get_wall(self, x, y):
@@ -101,9 +101,14 @@ class App:
 
         if self.state == STATE_TITLE:
             if self.is_confirm_pressed() and not self.input_lock:
-                self.score, self.stage, self.total_time = 0, 1, 0
-                self.init_stage()
-                self.state = STATE_PLAY
+                if not self.ready_to_start:
+                    self.ready_to_start = True # 1回目: 準備完了
+                else:
+                    # 2回目: ゲーム開始
+                    self.score, self.stage, self.total_time = 0, 1, 0
+                    self.init_stage()
+                    self.state = STATE_PLAY
+                    self.ready_to_start = False # フラグリセット
                 self.input_lock = True
         
         elif self.state == STATE_PLAY:
@@ -129,10 +134,7 @@ class App:
     def update_play(self):
         self.total_time += 1
         dx_val, dy_val, turbo = self.check_input()
-        
-        # ロック中（タイトルから指を離してない間）は移動を受け付けない
-        if self.input_lock:
-            dx_val, dy_val, turbo = 0, 0, False
+        if self.input_lock: dx_val, dy_val, turbo = 0, 0, False
 
         self.fuel -= 0.18 if turbo else 0.08
         if self.fuel <= 0:
@@ -141,7 +143,6 @@ class App:
             self.input_lock = True
         
         if self.power_timer > 0: self.power_timer -= 1
-        
         if pyxel.frame_count % 4 == 0: self.trails.append({"x": self.px, "y": self.py, "life": 20})
         for t in self.trails[:]:
             t["life"] -= 1
@@ -194,7 +195,10 @@ class App:
             pyxel.blt(0, 0, 0, 0, 0, 128, 128)
             self.draw_text_border(30, 40, "ROUTE  ULTIMATE", 7)
             self.draw_text_border(40, 55, "(C)M.Takahashi", 6)
-            self.draw_text_border(28, 100, "START: RELEASE TOUCH", 10)
+            if not self.ready_to_start:
+                self.draw_text_border(28, 100, "PUSH TO PREPARE", 10)
+            else:
+                self.draw_text_border(28, 100, "PUSH AGAIN TO GO!", 14)
         elif self.state == STATE_PLAY:
             lx, ly = self.px % 64, self.py % 64
             if not (8 < lx < 56 and 8 < ly < 56): self.draw_radar()
