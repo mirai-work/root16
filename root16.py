@@ -5,7 +5,6 @@ import random
 SCREEN_SIZE = 128
 UI_PANEL_HEIGHT = 48
 WORLD_SIZE = 256
-# STATE_TUTORIALを削除し、直接PLAYへ移行する構成
 STATE_TITLE, STATE_PLAY, STATE_CLEAR, STATE_GAMEOVER, STATE_ENDING = range(5)
 
 MAZE_DATA = {
@@ -20,18 +19,33 @@ class App:
     def __init__(self):
         pyxel.init(SCREEN_SIZE, SCREEN_SIZE + 16 + UI_PANEL_HEIGHT, title="ROUTE 16 ULTIMATE")
         try:
-            # 画像リソース（赤い車の画像）をロード
             pyxel.image(0).load(0, 0, "sp-tuka-.png")
         except:
-            # 画像がない場合のバックアップ描画
             pyxel.image(0).rect(0, 0, 128, 128, 1)
             pyxel.image(0).text(40, 60, "CAR IMAGE", 7)
         
-        pyxel.mouse(True)
+        # サウンドの初期化
+        self.init_sound()
+        
+        # マウスカーソルを非表示に設定
+        pyxel.mouse(False)
+        
         self.state = STATE_TITLE
         self.score, self.stage, self.total_time = 0, 1, 0
         self.trails, self.popups, self.ending_timer = [], [], 0
         pyxel.run(self.update, self.draw)
+
+    def init_sound(self):
+        # 0: メインBGMメロディ
+        pyxel.sounds[0].set("a2c3e3g3a2c3e3g3", "p", "5", "v", 20)
+        # 1: ベースライン
+        pyxel.sounds[1].set("a1a1e1e1a1a1g1g1", "s", "4", "n", 20)
+        # 2: 汎用取得音（コイン、敵撃破）
+        pyxel.sounds[2].set("c3e3g3c4", "p", "7", "v", 5)
+        # 3: ミス音
+        pyxel.sounds[3].set("f1e1d1c1", "n", "7", "f", 10)
+        # 4: 回復・パワーアップ音
+        pyxel.sounds[4].set("g3a3b3c4", "p", "7", "v", 5)
 
     def check_input(self):
         dx, dy = 0, 0
@@ -83,10 +97,12 @@ class App:
         for _ in range(num):
             ex, ey = self.find_safe_pos(random.randint(1,3), random.randint(1,3))
             self.enemies.append({"x": ex, "y": ey, "dx": 0, "dy": 0, "active": True, "speed": speed})
+        
+        # ステージ開始時にBGM再生
+        pyxel.play(0, [0, 1], loop=True)
 
     def update(self):
         if self.state == STATE_TITLE:
-            # 1回押すと即座にゲーム開始
             if self.is_confirm_pressed(): 
                 self.score, self.stage, self.total_time = 0, 1, 0
                 self.init_stage()
@@ -106,7 +122,9 @@ class App:
         self.total_time += 1
         dx_val, dy_val, turbo = self.check_input()
         self.fuel -= 0.18 if turbo else 0.08
-        if self.fuel <= 0: self.state = STATE_GAMEOVER
+        if self.fuel <= 0:
+            pyxel.stop(); pyxel.play(3, 3) # 燃料切れミス音
+            self.state = STATE_GAMEOVER
         if self.power_timer > 0: self.power_timer -= 1
         
         if pyxel.frame_count % 4 == 0: self.trails.append({"x": self.px, "y": self.py, "life": 20})
@@ -128,24 +146,34 @@ class App:
             if abs(self.px - e["x"]) < 5 and abs(self.py - e["y"]) < 5:
                 if self.power_timer > 0:
                     e["active"] = False; self.score += 500; self.popups.append({"x": e["x"], "y": e["y"], "txt": "DEFEAT!", "c": 10, "l": 20})
-                else: self.state = STATE_GAMEOVER
+                    pyxel.play(2, 2) # 敵撃破音
+                else:
+                    pyxel.stop(); pyxel.play(3, 3) # クラッシュ音
+                    self.state = STATE_GAMEOVER
         
         for it in self.items[:]:
             if abs(self.px - it["x"]) < 5 and abs(self.py - it["y"]) < 5:
-                if it["t"] == "G": self.score += 100; self.popups.append({"x": it["x"], "y": it["y"], "txt": "+100", "c": 10, "l": 20})
-                elif it["t"] == "F": self.fuel = min(100, self.fuel + 40); self.popups.append({"x": it["x"], "y": it["y"], "txt": "GAS UP", "c": 11, "l": 20})
-                elif it["t"] == "P": self.power_timer = 240; self.popups.append({"x": it["x"], "y": it["y"], "txt": "POWER!", "c": 12, "l": 20})
+                if it["t"] == "G": 
+                    self.score += 100; self.popups.append({"x": it["x"], "y": it["y"], "txt": "+100", "c": 10, "l": 20})
+                    pyxel.play(2, 2) # アイテム取得音
+                elif it["t"] == "F": 
+                    self.fuel = min(100, self.fuel + 40); self.popups.append({"x": it["x"], "y": it["y"], "txt": "GAS UP", "c": 11, "l": 20})
+                    pyxel.play(2, 4) # 給油音
+                elif it["t"] == "P": 
+                    self.power_timer = 240; self.popups.append({"x": it["x"], "y": it["y"], "txt": "POWER!", "c": 12, "l": 20})
+                    pyxel.play(2, 4) # パワーアップ音
                 self.items.remove(it)
         
         for p in self.popups[:]:
             p["y"] -= 0.5; p["l"] -= 1
             if p["l"] <= 0: self.popups.remove(p)
-        if len([i for i in self.items if i["t"] == "G"]) == 0: self.state = STATE_CLEAR
+        if len([i for i in self.items if i["t"] == "G"]) == 0: 
+            pyxel.stop(); pyxel.play(2, 4) # ステージクリア音
+            self.state = STATE_CLEAR
 
     def draw(self):
         pyxel.cls(0)
         if self.state == STATE_TITLE:
-            # タイトル背景に画像を使用
             pyxel.blt(0, 0, 0, 0, 0, 128, 128)
             self.draw_text_border(30, 40, "ROUTE  ULTIMATE", 7)
             self.draw_text_border(40, 55, "(C)M.Takahashi", 6)
@@ -159,7 +187,6 @@ class App:
         elif self.state == STATE_CLEAR:
             self.draw_text_border(30, 50, f"STAGE {self.stage} CLEAR!", 10)
         elif self.state == STATE_ENDING:
-            # エンディング背景にも画像を使用
             pyxel.blt(0, 0, 0, 0, 0, 128, 128)
             self.draw_text_border(30, 30, "MISSION COMPLETE!", pyxel.frame_count % 16)
             self.draw_text_border(30, 60, f"TOTAL SCORE: {self.score}", 10)
@@ -187,7 +214,7 @@ class App:
                 if off < 10: pyxel.line(x-5+off, y-4, x-3+off, y+1, 7)
 
     def draw_enemy_car(self, x, y):
-        pyxel.rect(x-5, y-4, 11, 7, 12) # 青い敵
+        pyxel.rect(x-5, y-4, 11, 7, 12) 
         pyxel.rect(x-2, y-7, 5, 4, 1)
         lamp = 8 if (pyxel.frame_count // 4) % 2 else 12
         pyxel.pset(x-1, y-8, lamp)
