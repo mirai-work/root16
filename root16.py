@@ -31,7 +31,6 @@ class App:
         self.score, self.stage, self.total_time = 0, 1, 0
         self.trails, self.popups, self.ending_timer = [], [], 0
         
-        # --- スマホ・連打対策用のフラグ ---
         self.input_lock = False 
         
         pyxel.run(self.update, self.draw)
@@ -62,9 +61,9 @@ class App:
         return dx, dy, turbo
 
     def is_confirm_pressed(self):
-        # 決定ボタンが押された瞬間だけを判定
-        return pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B) or \
-               (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT) and pyxel.mouse_y < 144)
+        # btnp（押した瞬間）ではなく btnr（離した瞬間）に変更して突き抜けを防止
+        return pyxel.btnr(pyxel.KEY_SPACE) or pyxel.btnr(pyxel.GAMEPAD1_BUTTON_B) or \
+               (pyxel.btnr(pyxel.MOUSE_BUTTON_LEFT) and pyxel.mouse_y < 144)
 
     def get_current_maze(self): return MAZE_DATA[self.stage]
     def get_wall(self, x, y):
@@ -97,7 +96,6 @@ class App:
         pyxel.play(0, [0, 1], loop=True)
 
     def update(self):
-        # 画面タッチが離れたらロックを解除
         if not pyxel.btn(pyxel.MOUSE_BUTTON_LEFT):
             self.input_lock = False
 
@@ -106,7 +104,6 @@ class App:
                 self.score, self.stage, self.total_time = 0, 1, 0
                 self.init_stage()
                 self.state = STATE_PLAY
-                # 遷移した瞬間にロックをかけ、指が離れるまで操作不能にする
                 self.input_lock = True
         
         elif self.state == STATE_PLAY:
@@ -197,7 +194,7 @@ class App:
             pyxel.blt(0, 0, 0, 0, 0, 128, 128)
             self.draw_text_border(30, 40, "ROUTE  ULTIMATE", 7)
             self.draw_text_border(40, 55, "(C)M.Takahashi", 6)
-            self.draw_text_border(28, 100, "START: PUSH/TOUCH", 10)
+            self.draw_text_border(28, 100, "START: RELEASE TOUCH", 10)
         elif self.state == STATE_PLAY:
             lx, ly = self.px % 64, self.py % 64
             if not (8 < lx < 56 and 8 < ly < 56): self.draw_radar()
