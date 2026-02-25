@@ -28,13 +28,14 @@ class App:
             pyxel.image(0).text(40, 60, "NO IMAGE FOUND", 7)
         
         self.init_sound()
-        pyxel.mouse(False)
+        pyxel.mouse(True) # ボタンを狙いやすくするためTrueに変更
         
         self.state = STATE_TITLE
         self.ready_to_start = False
         self.score, self.stage, self.total_time = 0, 1, 0
         self.trails, self.popups, self.ending_timer = [], [], 0
         self.input_lock = False 
+        self.is_turbo_active = False # 描画フィードバック用に追加
         
         pyxel.run(self.update, self.draw)
 
@@ -59,8 +60,12 @@ class App:
             if 5 <= mx <= 25 and 160 <= my <= 180: dx = -1
             if 35 <= mx <= 55 and 160 <= my <= 180: dx = 1
             
+        # --- ターボボタン判定の修正 (中心105, 170 からの距離で判定) ---
+        dist = ((mx - 105)**2 + (my - 170)**2)**0.5
         turbo = pyxel.btn(pyxel.KEY_LSHIFT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_A) or \
-                (pyxel.btn(pyxel.MOUSE_BUTTON_LEFT) and 90 <= mx <= 120 and 155 <= my <= 185)
+                (pyxel.btn(pyxel.MOUSE_BUTTON_LEFT) and dist < 16)
+        
+        self.is_turbo_active = turbo # 現在のターボ状態を保存
         return dx, dy, turbo
 
     def is_confirm_pressed(self):
@@ -187,7 +192,6 @@ class App:
     def draw(self):
         pyxel.cls(0)
         if self.state == STATE_TITLE:
-            # --- 画像を背景として描画 ---
             pyxel.blt(0, 0, 0, 0, 0, 128, 128)
             self.draw_text_border(30, 40, "ROUTE 16 ULTIMATE", 7)
             self.draw_text_border(40, 55, "(C)M.Takahashi", 6)
@@ -207,7 +211,6 @@ class App:
             self.draw_text_border(30, 50, f"STAGE {self.stage} CLEAR!", 10)
 
         elif self.state == STATE_ENDING:
-            # --- 画像を背景として描画 ---
             pyxel.blt(0, 0, 0, 0, 0, 128, 128)
             self.draw_text_border(30, 30, "MISSION COMPLETE!", pyxel.frame_count % 16)
             self.draw_text_border(30, 60, f"TOTAL SCORE: {self.score}", 10)
@@ -279,7 +282,11 @@ class App:
         pyxel.rectb(5, 160, 20, 20, 7); pyxel.rectb(35, 160, 20, 20, 7)
         pyxel.text(28, 152, "U", 7); pyxel.text(28, 182, "D", 7)
         pyxel.text(12, 168, "L", 7); pyxel.text(43, 168, "R", 7)
-        pyxel.circb(105, 170, 15, 7); pyxel.text(95, 168, "TURBO", 7)
+        
+        # --- ターボボタン描画の修正 (押している時は黄色に) ---
+        t_col = 10 if self.is_turbo_active else 7
+        pyxel.circb(105, 170, 15, t_col)
+        pyxel.text(95, 168, "TURBO", t_col)
 
     def draw_text_border(self, x, y, text, col):
         for ox, oy in [(-1,0),(1,0),(0,-1),(0,1)]: pyxel.text(x+ox, y+oy, text, 0)
