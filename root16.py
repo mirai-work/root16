@@ -18,20 +18,22 @@ MAZE_DATA = {
 class App:
     def __init__(self):
         pyxel.init(SCREEN_SIZE, SCREEN_SIZE + 16 + UI_PANEL_HEIGHT, title="ROUTE 16 ULTIMATE")
+        
+        # --- 画像の読み込み (タイトル・エンディング用) ---
         try:
             pyxel.image(0).load(0, 0, "sp-tuka-.png")
         except:
+            # 画像がない場合の予備（青い背景に文字）
             pyxel.image(0).rect(0, 0, 128, 128, 1)
-            pyxel.image(0).text(40, 60, "CAR IMAGE", 7)
+            pyxel.image(0).text(40, 60, "NO IMAGE FOUND", 7)
         
         self.init_sound()
         pyxel.mouse(False)
         
         self.state = STATE_TITLE
-        self.ready_to_start = False  # 追加：2ステップ開始用フラグ
+        self.ready_to_start = False
         self.score, self.stage, self.total_time = 0, 1, 0
         self.trails, self.popups, self.ending_timer = [], [], 0
-        
         self.input_lock = False 
         
         pyxel.run(self.update, self.draw)
@@ -51,7 +53,7 @@ class App:
         elif pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT): dx = 1
         
         mx, my = pyxel.mouse_x, pyxel.mouse_y
-        if pyxel.btn(pyxel.MOUSE_BUTTON_LEFT):
+        if pyxel.btn(pyxel.MOUSE_BUTTON_LEFT) and my > 144:
             if 20 <= mx <= 40 and 145 <= my <= 165: dy = -1
             if 20 <= mx <= 40 and 175 <= my <= 195: dy = 1
             if 5 <= mx <= 25 and 160 <= my <= 180: dx = -1
@@ -65,7 +67,8 @@ class App:
         return pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B) or \
                (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT) and pyxel.mouse_y < 144)
 
-    def get_current_maze(self): return MAZE_DATA[self.stage]
+    def get_current_maze(self): return MAZE_DATA[min(self.stage, 5)]
+    
     def get_wall(self, x, y):
         if x < 0 or y < 0 or x >= WORLD_SIZE or y >= WORLD_SIZE: return True
         return self.get_current_maze()[int((y % 64) // 8)][int((x % 64) // 8)] == 1
@@ -89,30 +92,26 @@ class App:
                     xp, yp = self.find_safe_pos(rx, ry); self.items.append({"x": xp, "y": yp, "t": "P"})
         self.enemies = []
         config = {1:(2, 0.5), 2:(2, 0.8), 3:(3, 0.6), 4:(4, 0.7), 5:(6, 0.75)}
-        num, speed = config[self.stage]
+        num, speed = config.get(self.stage, (6, 0.8))
         for _ in range(num):
             ex, ey = self.find_safe_pos(random.randint(1,3), random.randint(1,3))
             self.enemies.append({"x": ex, "y": ey, "dx": 0, "dy": 0, "active": True, "speed": speed})
         pyxel.play(0, [0, 1], loop=True)
 
     def update(self):
-        if not pyxel.btn(pyxel.MOUSE_BUTTON_LEFT):
-            self.input_lock = False
+        if not pyxel.btn(pyxel.MOUSE_BUTTON_LEFT): self.input_lock = False
 
         if self.state == STATE_TITLE:
             if self.is_confirm_pressed() and not self.input_lock:
-                if not self.ready_to_start:
-                    self.ready_to_start = True # 1回目: 準備完了
+                if not self.ready_to_start: self.ready_to_start = True
                 else:
-                    # 2回目: ゲーム開始
                     self.score, self.stage, self.total_time = 0, 1, 0
                     self.init_stage()
                     self.state = STATE_PLAY
-                    self.ready_to_start = False # フラグリセット
+                    self.ready_to_start = False
                 self.input_lock = True
         
-        elif self.state == STATE_PLAY:
-            self.update_play()
+        elif self.state == STATE_PLAY: self.update_play()
         
         elif self.state == STATE_CLEAR:
             if self.is_confirm_pressed() and not self.input_lock:
@@ -143,10 +142,6 @@ class App:
             self.input_lock = True
         
         if self.power_timer > 0: self.power_timer -= 1
-        if pyxel.frame_count % 4 == 0: self.trails.append({"x": self.px, "y": self.py, "life": 20})
-        for t in self.trails[:]:
-            t["life"] -= 1
-            if t["life"] <= 0: self.trails.remove(t)
             
         mv = (2.4 if turbo else 1.6) if self.stage == 2 else (2.1 if turbo else 1.3)
         if not self.get_wall(self.px + dx_val * mv, self.py): self.px += dx_val * mv
@@ -192,28 +187,34 @@ class App:
     def draw(self):
         pyxel.cls(0)
         if self.state == STATE_TITLE:
+            # --- 画像を背景として描画 ---
             pyxel.blt(0, 0, 0, 0, 0, 128, 128)
-            self.draw_text_border(30, 40, "ROUTE  ULTIMATE", 7)
+            self.draw_text_border(30, 40, "ROUTE 16 ULTIMATE", 7)
             self.draw_text_border(40, 55, "(C)M.Takahashi", 6)
             if not self.ready_to_start:
                 self.draw_text_border(28, 100, "PUSH TO PREPARE", 10)
             else:
                 self.draw_text_border(28, 100, "PUSH AGAIN TO GO!", 14)
+
         elif self.state == STATE_PLAY:
             lx, ly = self.px % 64, self.py % 64
             if not (8 < lx < 56 and 8 < ly < 56): self.draw_radar()
             else: self.draw_zoom()
             self.draw_ui()
             self.draw_vpad()
+
         elif self.state == STATE_CLEAR:
             self.draw_text_border(30, 50, f"STAGE {self.stage} CLEAR!", 10)
+
         elif self.state == STATE_ENDING:
+            # --- 画像を背景として描画 ---
             pyxel.blt(0, 0, 0, 0, 0, 128, 128)
             self.draw_text_border(30, 30, "MISSION COMPLETE!", pyxel.frame_count % 16)
             self.draw_text_border(30, 60, f"TOTAL SCORE: {self.score}", 10)
             self.draw_text_border(30, 75, f"TOTAL TIME: {self.total_time // 30}s", 7)
             self.draw_text_border(40, 90, "(C)M.Takahashi", 10)
             if self.ending_timer > 60: self.draw_text_border(30, 110, "PUSH TO TITLE", 6)
+
         elif self.state == STATE_GAMEOVER:
             self.draw_text_border(45, 60, "GAME OVER", 8)
 
@@ -221,11 +222,9 @@ class App:
         if self.power_timer > 0:
             c = [7, 10, 12, 14][(pyxel.frame_count // 2) % 4]
         else:
-            is_gold = self.score >= 5000
-            c = 10 if is_gold else (7 if is_radar else 8)
+            c = 10 if self.score >= 5000 else (7 if is_radar else 8)
         
-        if is_radar:
-            pyxel.rect(x-1, y-1, 3, 3, c)
+        if is_radar: pyxel.rect(x-1, y-1, 3, 3, c)
         else:
             pyxel.rect(x-6, y-3, 13, 7, 0)
             pyxel.rect(x-5, y-4, 11, 7, c)
@@ -236,7 +235,6 @@ class App:
         pyxel.rect(x-2, y-7, 5, 4, 1)
         lamp = 8 if (pyxel.frame_count // 4) % 2 else 12
         pyxel.pset(x-1, y-8, lamp)
-        pyxel.pset(x-5, y-2, 5); pyxel.pset(x+5, y-2, 5)
 
     def draw_zoom(self):
         rx, ry = (self.px // 64)*64, (self.py // 64)*64
@@ -277,14 +275,11 @@ class App:
     def draw_vpad(self):
         pyxel.rect(0, 144, 128, UI_PANEL_HEIGHT, 1)
         pyxel.line(0, 144, 128, 144, 7)
-        pyxel.rectb(20, 145, 20, 20, 7)
-        pyxel.rectb(20, 175, 20, 20, 7)
-        pyxel.rectb(5, 160, 20, 20, 7)
-        pyxel.rectb(35, 160, 20, 20, 7)
+        pyxel.rectb(20, 145, 20, 20, 7); pyxel.rectb(20, 175, 20, 20, 7)
+        pyxel.rectb(5, 160, 20, 20, 7); pyxel.rectb(35, 160, 20, 20, 7)
         pyxel.text(28, 152, "U", 7); pyxel.text(28, 182, "D", 7)
         pyxel.text(12, 168, "L", 7); pyxel.text(43, 168, "R", 7)
-        pyxel.circb(105, 170, 15, 7)
-        pyxel.text(95, 168, "TURBO", 7)
+        pyxel.circb(105, 170, 15, 7); pyxel.text(95, 168, "TURBO", 7)
 
     def draw_text_border(self, x, y, text, col):
         for ox, oy in [(-1,0),(1,0),(0,-1),(0,1)]: pyxel.text(x+ox, y+oy, text, 0)
