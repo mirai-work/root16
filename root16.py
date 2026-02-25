@@ -24,27 +24,23 @@ class App:
             pyxel.image(0).rect(0, 0, 128, 128, 1)
             pyxel.image(0).text(40, 60, "CAR IMAGE", 7)
         
-        # サウンドの初期化
         self.init_sound()
-        
-        # マウスカーソルを非表示に設定
         pyxel.mouse(False)
         
         self.state = STATE_TITLE
         self.score, self.stage, self.total_time = 0, 1, 0
         self.trails, self.popups, self.ending_timer = [], [], 0
+        
+        # --- スマホ・連打対策用のフラグ ---
+        self.input_lock = False 
+        
         pyxel.run(self.update, self.draw)
 
     def init_sound(self):
-        # 0: メインBGMメロディ
         pyxel.sounds[0].set("a2c3e3g3a2c3e3g3", "p", "5", "v", 20)
-        # 1: ベースライン
         pyxel.sounds[1].set("a1a1e1e1a1a1g1g1", "s", "4", "n", 20)
-        # 2: 汎用取得音（コイン、敵撃破）
         pyxel.sounds[2].set("c3e3g3c4", "p", "7", "v", 5)
-        # 3: ミス音
         pyxel.sounds[3].set("f1e1d1c1", "n", "7", "f", 10)
-        # 4: 回復・パワーアップ音
         pyxel.sounds[4].set("g3a3b3c4", "p", "7", "v", 5)
 
     def check_input(self):
@@ -66,6 +62,7 @@ class App:
         return dx, dy, turbo
 
     def is_confirm_pressed(self):
+        # 決定ボタンが押された瞬間だけを判定
         return pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B) or \
                (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT) and pyxel.mouse_y < 144)
 
@@ -97,34 +94,55 @@ class App:
         for _ in range(num):
             ex, ey = self.find_safe_pos(random.randint(1,3), random.randint(1,3))
             self.enemies.append({"x": ex, "y": ey, "dx": 0, "dy": 0, "active": True, "speed": speed})
-        
-        # ステージ開始時にBGM再生
         pyxel.play(0, [0, 1], loop=True)
 
     def update(self):
+        # 画面タッチが離れたらロックを解除
+        if not pyxel.btn(pyxel.MOUSE_BUTTON_LEFT):
+            self.input_lock = False
+
         if self.state == STATE_TITLE:
-            if self.is_confirm_pressed(): 
+            if self.is_confirm_pressed() and not self.input_lock:
                 self.score, self.stage, self.total_time = 0, 1, 0
                 self.init_stage()
                 self.state = STATE_PLAY
-        elif self.state == STATE_PLAY: self.update_play()
+                # 遷移した瞬間にロックをかけ、指が離れるまで操作不能にする
+                self.input_lock = True
+        
+        elif self.state == STATE_PLAY:
+            self.update_play()
+        
         elif self.state == STATE_CLEAR:
-            if self.is_confirm_pressed():
+            if self.is_confirm_pressed() and not self.input_lock:
                 if self.stage >= 5: self.state = STATE_ENDING; self.ending_timer = 0
                 else: self.stage += 1; self.init_stage(); self.state = STATE_PLAY
+                self.input_lock = True
+                
         elif self.state == STATE_ENDING:
             self.ending_timer += 1
-            if self.ending_timer > 60 and self.is_confirm_pressed(): self.state = STATE_TITLE
+            if self.ending_timer > 60 and self.is_confirm_pressed() and not self.input_lock:
+                self.state = STATE_TITLE
+                self.input_lock = True
+                
         elif self.state == STATE_GAMEOVER:
-            if self.is_confirm_pressed(): self.state = STATE_TITLE
+            if self.is_confirm_pressed() and not self.input_lock:
+                self.state = STATE_TITLE
+                self.input_lock = True
 
     def update_play(self):
         self.total_time += 1
         dx_val, dy_val, turbo = self.check_input()
+        
+        # ロック中（タイトルから指を離してない間）は移動を受け付けない
+        if self.input_lock:
+            dx_val, dy_val, turbo = 0, 0, False
+
         self.fuel -= 0.18 if turbo else 0.08
         if self.fuel <= 0:
-            pyxel.stop(); pyxel.play(3, 3) # 燃料切れミス音
+            pyxel.stop(); pyxel.play(3, 3)
             self.state = STATE_GAMEOVER
+            self.input_lock = True
+        
         if self.power_timer > 0: self.power_timer -= 1
         
         if pyxel.frame_count % 4 == 0: self.trails.append({"x": self.px, "y": self.py, "life": 20})
@@ -146,30 +164,32 @@ class App:
             if abs(self.px - e["x"]) < 5 and abs(self.py - e["y"]) < 5:
                 if self.power_timer > 0:
                     e["active"] = False; self.score += 500; self.popups.append({"x": e["x"], "y": e["y"], "txt": "DEFEAT!", "c": 10, "l": 20})
-                    pyxel.play(2, 2) # 敵撃破音
+                    pyxel.play(2, 2)
                 else:
-                    pyxel.stop(); pyxel.play(3, 3) # クラッシュ音
+                    pyxel.stop(); pyxel.play(3, 3)
                     self.state = STATE_GAMEOVER
+                    self.input_lock = True
         
         for it in self.items[:]:
             if abs(self.px - it["x"]) < 5 and abs(self.py - it["y"]) < 5:
                 if it["t"] == "G": 
                     self.score += 100; self.popups.append({"x": it["x"], "y": it["y"], "txt": "+100", "c": 10, "l": 20})
-                    pyxel.play(2, 2) # アイテム取得音
+                    pyxel.play(2, 2)
                 elif it["t"] == "F": 
                     self.fuel = min(100, self.fuel + 40); self.popups.append({"x": it["x"], "y": it["y"], "txt": "GAS UP", "c": 11, "l": 20})
-                    pyxel.play(2, 4) # 給油音
+                    pyxel.play(2, 4)
                 elif it["t"] == "P": 
                     self.power_timer = 240; self.popups.append({"x": it["x"], "y": it["y"], "txt": "POWER!", "c": 12, "l": 20})
-                    pyxel.play(2, 4) # パワーアップ音
+                    pyxel.play(2, 4)
                 self.items.remove(it)
         
         for p in self.popups[:]:
             p["y"] -= 0.5; p["l"] -= 1
             if p["l"] <= 0: self.popups.remove(p)
         if len([i for i in self.items if i["t"] == "G"]) == 0: 
-            pyxel.stop(); pyxel.play(2, 4) # ステージクリア音
+            pyxel.stop(); pyxel.play(2, 4)
             self.state = STATE_CLEAR
+            self.input_lock = True
 
     def draw(self):
         pyxel.cls(0)
@@ -209,9 +229,6 @@ class App:
             pyxel.rect(x-6, y-3, 13, 7, 0)
             pyxel.rect(x-5, y-4, 11, 7, c)
             pyxel.rect(x-2, y-7, 5, 4, 1)
-            if self.score >= 5000 and self.power_timer <= 0:
-                off = pyxel.frame_count % 15
-                if off < 10: pyxel.line(x-5+off, y-4, x-3+off, y+1, 7)
 
     def draw_enemy_car(self, x, y):
         pyxel.rect(x-5, y-4, 11, 7, 12) 
@@ -223,9 +240,6 @@ class App:
     def draw_zoom(self):
         rx, ry = (self.px // 64)*64, (self.py // 64)*64
         maze = self.get_current_maze()
-        for t in self.trails:
-            if rx <= t["x"] < rx+64 and ry <= t["y"] < ry+64:
-                pyxel.pset((t["x"]-rx)*2, (t["y"]-ry)*2, 13 if t["life"] > 10 else 5)
         for ty in range(8):
             for tx in range(8):
                 if maze[ty][tx]: pyxel.rect(tx*16, ty*16, 14, 14, 5)
