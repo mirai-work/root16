@@ -31,7 +31,8 @@ class App:
         self.score, self.stage, self.total_time = 0, 1, 0
         self.life = 3
         self.trails, self.popups, self.ending_timer = [], [], 0
-        self.input_lock, self.is_turbo_active = False, False 
+        self.input_lock = False
+        self.is_turbo_active = False # ターボの状態保持
         pyxel.run(self.update, self.draw)
 
     def init_sound(self):
@@ -43,31 +44,31 @@ class App:
 
     def check_input(self):
         dx, dy = 0, 0
-        # キーボード・ゲームパッド判定
+        # キーボード入力
         if pyxel.btn(pyxel.KEY_UP) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_UP): dy = -1
         elif pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN): dy = 1
         if pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT): dx = -1
         elif pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT): dx = 1
         
         mx, my = pyxel.mouse_x, pyxel.mouse_y
-        is_mouse_down = pyxel.btn(pyxel.MOUSE_BUTTON_LEFT)
         
-        # モバイル（タップ）用V-PAD判定：方向とターボを独立してチェック
-        if is_mouse_down and my > 144:
-            # 方向判定
+        # ターボの切り替え判定（クリックした瞬間にON/OFFを入れ替える）
+        dist_to_turbo = ((mx - 105)**2 + (my - 170)**2)**0.5
+        if pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT) and dist_to_turbo < 20:
+            self.is_turbo_active = not self.is_turbo_active
+        
+        # キーボードのシフトキーなどは押しっぱなしで動作
+        keyboard_turbo = pyxel.btn(pyxel.KEY_LSHIFT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_A)
+        
+        # 方向ボタン（V-PAD）の判定
+        if pyxel.btn(pyxel.MOUSE_BUTTON_LEFT) and my > 144:
             if 20 <= mx <= 40 and 145 <= my <= 165: dy = -1
             if 20 <= mx <= 40 and 175 <= my <= 195: dy = 1
             if 5 <= mx <= 25 and 160 <= my <= 180: dx = -1
             if 35 <= mx <= 55 and 160 <= my <= 180: dx = 1
-        
-        # ターボ判定（全ボタン共通）
-        dist_to_turbo = ((mx - 105)**2 + (my - 170)**2)**0.5
-        turbo = (pyxel.btn(pyxel.KEY_LSHIFT) or 
-                 pyxel.btn(pyxel.GAMEPAD1_BUTTON_A) or 
-                 (is_mouse_down and dist_to_turbo < 15)) # 判定半径を微調整
-        
-        self.is_turbo_active = turbo 
-        return dx, dy, turbo
+            
+        final_turbo = self.is_turbo_active or keyboard_turbo
+        return dx, dy, final_turbo
 
     def is_confirm_pressed(self):
         return (pyxel.btnp(pyxel.KEY_SPACE) or 
@@ -228,13 +229,15 @@ class App:
         self.draw_text_border(22, 134, "TAP OR SPACE TO START", pyxel.frame_count % 16)
 
     def draw_player_car(self, x, y, is_radar=False):
+        # ターボ状態を分かりやすくするため、アクティブ時は煙を多めに出す
+        is_turbo = self.is_turbo_active or pyxel.btn(pyxel.KEY_LSHIFT)
         if self.power_timer > 0: c = [7, 10, 12, 14][(pyxel.frame_count // 2) % 4]
         elif self.score >= 10000: c = [9, 10, 11, 12, 14][(pyxel.frame_count // 2) % 5]
         elif self.score >= 5000: c = 10
         else: c = 7 if is_radar else 8
         if is_radar: pyxel.rect(x-1, y-1, 3, 3, c)
         else:
-            if self.is_turbo_active:
+            if is_turbo:
                 for _ in range(3): pyxel.pset(x + random.randint(-10, -5), y + random.randint(-3, 3), random.choice([7, 10, 9]))
             pyxel.rect(x-6, y-3, 13, 7, 0); pyxel.rect(x-5, y-4, 11, 7, c); pyxel.rect(x-2, y-7, 5, 4, 1)
             pyxel.rect(x-5, y+2, 2, 2, 0); pyxel.rect(x+4, y+2, 2, 2, 0)
@@ -284,6 +287,7 @@ class App:
     def draw_vpad(self):
         pyxel.rect(0, 144, 128, UI_PANEL_HEIGHT, 1); pyxel.line(0, 144, 128, 144, 7)
         pyxel.rectb(20, 145, 20, 20, 7); pyxel.rectb(20, 175, 20, 20, 7); pyxel.rectb(5, 160, 20, 20, 7); pyxel.rectb(35, 160, 20, 20, 7)
+        # ターボがONの時はボタンを明るく表示
         t_col = 10 if self.is_turbo_active else 7
         pyxel.circb(105, 170, 15, t_col); pyxel.text(95, 168, "TURBO", t_col)
 
