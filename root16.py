@@ -5,42 +5,32 @@ import random
 SCREEN_SIZE = 128
 UI_PANEL_HEIGHT = 48
 WORLD_SIZE = 256
-STATE_TITLE, STATE_PLAY, STATE_CLEAR, STATE_GAMEOVER, STATE_ENDING = range(5)
+STATE_TITLE, STATE_PLAY, STATE_CLEAR, STATE_GAMEOVER, STATE_ENDING, STATE_TUTORIAL = range(6)
 
-# --- 迷路データ (3面以降の通行不能エリアを完全に修正) ---
-# 0: 通路, 1: 壁
-# 各部屋が必ず外周および隣接する部屋と繋がるように設計
+# --- 迷路データ ---
 MAZE_DATA = {
     1: [[1,1,0,0,0,0,1,1],[1,0,0,0,0,0,0,1],[0,0,0,1,1,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,1,1,0,0,0],[1,0,0,0,0,0,0,1],[1,1,0,0,0,0,1,1]],
     2: [[1,1,0,0,0,0,1,1],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[1,0,0,1,1,0,0,1],[1,0,0,1,1,0,0,1],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[1,1,0,0,0,0,1,1]],
-    # 3面: 十字の大きな通り道を作り、四隅にブロックを配置（回遊性を確保）
     3: [[0,0,0,1,1,0,0,0],[0,1,0,0,0,0,1,0],[0,0,0,0,0,0,0,0],[1,0,0,1,1,0,0,1],[1,0,0,1,1,0,0,1],[0,0,0,0,0,0,0,0],[0,1,0,0,0,0,1,0],[0,0,0,1,1,0,0,0]],
-    # 4面: 中央を横断・縦断できるようにし、敵を撒きやすく修正
     4: [[1,0,0,0,0,0,0,1],[0,0,1,1,1,1,0,0],[0,1,0,0,0,0,1,0],[0,1,0,1,1,0,1,0],[0,1,0,1,1,0,1,0],[0,1,0,0,0,0,1,0],[0,0,1,1,1,1,0,0],[1,0,0,0,0,0,0,1]],
-    # 5面: チェッカーフラッグ状の配置で、どこからでも逃げられる究極のオープンマップ
     5: [[0,0,0,0,0,0,0,0],[0,1,0,1,0,1,0,0],[0,0,0,0,0,0,0,0],[0,1,0,1,0,1,0,0],[0,0,0,0,0,0,0,0],[0,1,0,1,0,1,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]]
 }
 
 class App:
     def __init__(self):
         pyxel.init(SCREEN_SIZE, SCREEN_SIZE + 16 + UI_PANEL_HEIGHT, title="ROUTE 16 ULTIMATE")
-        
         try:
             pyxel.image(0).load(0, 0, "sp-tuka-.png")
         except:
             pyxel.image(0).rect(0, 0, 128, 128, 1)
             pyxel.image(0).text(40, 60, "NO IMAGE FOUND", 7)
-        
         self.init_sound()
         pyxel.mouse(True)
-        
         self.state = STATE_TITLE
         self.ready_to_start = False
         self.score, self.stage, self.total_time = 0, 1, 0
-        self.trails, self.popups, self.ending_timer = [], [], 0
-        self.input_lock = False 
-        self.is_turbo_active = False 
-        
+        self.trails, self.popups, self.items = [], [], []
+        self.ending_timer, self.input_lock, self.is_turbo_active = 0, False, False 
         pyxel.run(self.update, self.draw)
 
     def init_sound(self):
@@ -56,54 +46,41 @@ class App:
         elif pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN): dy = 1
         if pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT): dx = -1
         elif pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT): dx = 1
-        
         mx, my = pyxel.mouse_x, pyxel.mouse_y
         if pyxel.btn(pyxel.MOUSE_BUTTON_LEFT) and my > 144:
             if 20 <= mx <= 40 and 145 <= my <= 165: dy = -1
             if 20 <= mx <= 40 and 175 <= my <= 195: dy = 1
             if 5 <= mx <= 25 and 160 <= my <= 180: dx = -1
             if 35 <= mx <= 55 and 160 <= my <= 180: dx = 1
-            
         dist = ((mx - 105)**2 + (my - 170)**2)**0.5
-        turbo = pyxel.btn(pyxel.KEY_LSHIFT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_A) or \
-                (pyxel.btn(pyxel.MOUSE_BUTTON_LEFT) and dist < 16)
-        
+        turbo = pyxel.btn(pyxel.KEY_LSHIFT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_A) or (pyxel.btn(pyxel.MOUSE_BUTTON_LEFT) and dist < 16)
         self.is_turbo_active = turbo 
         return dx, dy, turbo
 
     def is_confirm_pressed(self):
-        return pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B) or \
-               (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT) and pyxel.mouse_y < 144)
+        return pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B) or (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT) and pyxel.mouse_y < 144)
 
     def get_current_maze(self): return MAZE_DATA[min(self.stage, 5)]
-    
     def get_wall(self, x, y):
         if x < 0 or y < 0 or x >= WORLD_SIZE or y >= WORLD_SIZE: return True
         return self.get_current_maze()[int((y % 64) // 8)][int((x % 64) // 8)] == 1
 
     def find_safe_pos(self, rx, ry):
-        maze = self.get_current_maze()
-        candidates = []
+        maze = self.get_current_maze(); candidates = []
         for ty in range(8):
             for tx in range(8):
-                if maze[ty][tx] == 0:
-                    candidates.append((tx, ty))
-        if candidates:
-            tx, ty = random.choice(candidates)
-            return rx * 64 + tx * 8 + 4, ry * 64 + ty * 8 + 4
+                if maze[ty][tx] == 0: candidates.append((tx, ty))
+        if candidates: tx, ty = random.choice(candidates); return rx * 64 + tx * 8 + 4, ry * 64 + ty * 8 + 4
         return rx * 64 + 32, ry * 64 + 32
 
     def init_stage(self):
-        self.px, self.py = self.find_safe_pos(0, 0)
-        self.fuel, self.power_timer = 100.0, 0
+        self.px, self.py = self.find_safe_pos(0, 0); self.fuel, self.power_timer = 100.0, 0
         self.trails, self.popups, self.items = [], [], []
         for rx in range(4):
             for ry in range(4):
                 x, y = self.find_safe_pos(rx, ry); self.items.append({"x": x, "y": y, "t": "G"})
-                if (rx + ry) % 3 == 0:
-                    xf, yf = self.find_safe_pos(rx, ry); self.items.append({"x": xf, "y": yf, "t": "F"})
-                if (rx == 1 and ry == 2) or (rx == 3 and ry == 0):
-                    xp, yp = self.find_safe_pos(rx, ry); self.items.append({"x": xp, "y": yp, "t": "P"})
+                if (rx + ry) % 3 == 0: xf, yf = self.find_safe_pos(rx, ry); self.items.append({"x": xf, "y": yf, "t": "F"})
+                if (rx == 1 and ry == 2) or (rx == 3 and ry == 0): xp, yp = self.find_safe_pos(rx, ry); self.items.append({"x": xp, "y": yp, "t": "P"})
         self.enemies = []
         config = {1:(2, 0.5), 2:(2, 0.8), 3:(3, 0.6), 4:(4, 0.7), 5:(6, 0.75)}
         num, speed = config.get(self.stage, (6, 0.8))
@@ -117,12 +94,12 @@ class App:
         if self.state == STATE_TITLE:
             if self.is_confirm_pressed() and not self.input_lock:
                 if not self.ready_to_start: self.ready_to_start = True
-                else:
-                    self.score, self.stage, self.total_time = 0, 1, 0
-                    self.init_stage()
-                    self.state = STATE_PLAY
-                    self.ready_to_start = False
+                else: self.state = STATE_TUTORIAL; self.ready_to_start = False
                 self.input_lock = True
+        elif self.state == STATE_TUTORIAL:
+            if self.is_confirm_pressed() and not self.input_lock:
+                self.score, self.stage, self.total_time = 0, 1, 0
+                self.init_stage(); self.state = STATE_PLAY; self.input_lock = True
         elif self.state == STATE_PLAY: self.update_play()
         elif self.state == STATE_CLEAR:
             if self.is_confirm_pressed() and not self.input_lock:
@@ -132,20 +109,16 @@ class App:
         elif self.state == STATE_ENDING:
             self.ending_timer += 1
             if self.ending_timer > 60 and self.is_confirm_pressed() and not self.input_lock:
-                self.state = STATE_TITLE
-                self.input_lock = True
+                self.state = STATE_TITLE; self.input_lock = True
         elif self.state == STATE_GAMEOVER:
             if self.is_confirm_pressed() and not self.input_lock:
-                self.state = STATE_TITLE
-                self.input_lock = True
+                self.state = STATE_TITLE; self.input_lock = True
 
     def update_play(self):
-        self.total_time += 1
-        dx_val, dy_val, turbo = self.check_input()
+        self.total_time += 1; dx_val, dy_val, turbo = self.check_input()
         if self.input_lock: dx_val, dy_val, turbo = 0, 0, False
         self.fuel -= 0.18 if turbo else 0.08
-        if self.fuel <= 0:
-            pyxel.stop(); pyxel.play(3, 3); self.state = STATE_GAMEOVER; self.input_lock = True
+        if self.fuel <= 0: pyxel.stop(); pyxel.play(3, 3); self.state = STATE_GAMEOVER; self.input_lock = True
         if self.power_timer > 0: self.power_timer -= 1
         mv = (2.4 if turbo else 1.6) if self.stage == 2 else (2.1 if turbo else 1.3)
         if not self.get_wall(self.px + dx_val * mv, self.py): self.px += dx_val * mv
@@ -160,8 +133,7 @@ class App:
             if abs(self.px - e["x"]) < 5 and abs(self.py - e["y"]) < 5:
                 if self.power_timer > 0:
                     e["active"] = False; self.score += 500; self.popups.append({"x": e["x"], "y": e["y"], "txt": "DEFEAT!", "c": 10, "l": 20}); pyxel.play(2, 2)
-                else:
-                    pyxel.stop(); pyxel.play(3, 3); self.state = STATE_GAMEOVER; self.input_lock = True
+                else: pyxel.stop(); pyxel.play(3, 3); self.state = STATE_GAMEOVER; self.input_lock = True
         for it in self.items[:]:
             if abs(self.px - it["x"]) < 5 and abs(self.py - it["y"]) < 5:
                 if it["t"] == "G": self.score += 100; self.popups.append({"x": it["x"], "y": it["y"], "txt": "+100", "c": 10, "l": 20}); pyxel.play(2, 2)
@@ -171,8 +143,7 @@ class App:
         for p in self.popups[:]:
             p["y"] -= 0.5; p["l"] -= 1
             if p["l"] <= 0: self.popups.remove(p)
-        if len([i for i in self.items if i["t"] == "G"]) == 0: 
-            pyxel.stop(); pyxel.play(2, 4); self.state = STATE_CLEAR; self.input_lock = True
+        if len([i for i in self.items if i["t"] == "G"]) == 0: pyxel.stop(); pyxel.play(2, 4); self.state = STATE_CLEAR; self.input_lock = True
 
     def draw(self):
         pyxel.cls(0)
@@ -182,6 +153,7 @@ class App:
             self.draw_text_border(40, 55, "(C)M.Takahashi", 6)
             txt = "PUSH TO PREPARE" if not self.ready_to_start else "PUSH AGAIN TO GO!"
             self.draw_text_border(28, 100, txt, 10 if not self.ready_to_start else 14)
+        elif self.state == STATE_TUTORIAL: self.draw_tutorial()
         elif self.state == STATE_PLAY:
             lx, ly = self.px % 64, self.py % 64
             if not (8 < lx < 56 and 8 < ly < 56): self.draw_radar()
@@ -196,10 +168,36 @@ class App:
             if self.ending_timer > 60: self.draw_text_border(30, 110, "PUSH TO TITLE", 6)
         elif self.state == STATE_GAMEOVER: self.draw_text_border(45, 60, "GAME OVER", 8)
 
+    def draw_tutorial(self):
+        self.draw_text_border(42, 6, "HOW TO PLAY", 10)
+        # 操作説明：短縮して横幅を確保
+        pyxel.text(5, 20, "PC:ARROW-KEY / SHIFT:TURBO", 7)
+        pyxel.text(5, 28, "SP:V-PAD     / TURBO-BTN", 7)
+        # アイテム説明：記号を強調
+        pyxel.text(5, 42, "$:GET ALL", 10); pyxel.text(45, 42, "F:FUEL UP", 11); pyxel.text(85, 42, "O:POWER UP", 12)
+        # モード説明：枠を少し狭く
+        pyxel.rectb(4, 55, 120, 18, 5)
+        pyxel.text(8, 58, "CENTER=ZOOM / EDGE=RADAR-MAP", 6)
+        pyxel.text(8, 65, "DONT HIT THE ENEMY CARS!", 8)
+        # スマホVパッド：中央寄せ
+        pyxel.text(32, 80, "-- MOBILE PAD --", 6)
+        pyxel.rectb(30, 92, 10, 10, 7); pyxel.text(33, 94, "U", 7)
+        pyxel.rectb(30, 112, 10, 10, 7); pyxel.text(33, 114, "D", 7)
+        pyxel.rectb(18, 102, 10, 10, 7); pyxel.text(21, 104, "L", 7)
+        pyxel.rectb(42, 102, 10, 10, 7); pyxel.text(45, 104, "R", 7)
+        pyxel.circb(95, 107, 10, 10); pyxel.text(85, 105, "TURBO", 10)
+        self.draw_text_border(22, 134, "PUSH SCREEN TO START", pyxel.frame_count % 16)
+
     def draw_player_car(self, x, y, is_radar=False):
-        c = [7, 10, 12, 14][(pyxel.frame_count // 2) % 4] if self.power_timer > 0 else (10 if self.score >= 5000 else (7 if is_radar else 8))
+        if self.power_timer > 0: c = [7, 10, 12, 14][(pyxel.frame_count // 2) % 4]
+        elif self.score >= 10000: c = [9, 10, 11, 12, 14][(pyxel.frame_count // 2) % 5]
+        elif self.score >= 5000: c = 10
+        else: c = 7 if is_radar else 8
         if is_radar: pyxel.rect(x-1, y-1, 3, 3, c)
-        else: pyxel.rect(x-6, y-3, 13, 7, 0); pyxel.rect(x-5, y-4, 11, 7, c); pyxel.rect(x-2, y-7, 5, 4, 1)
+        else:
+            if self.is_turbo_active:
+                for _ in range(3): pyxel.pset(x + random.randint(-10, -5), y + random.randint(-3, 3), random.choice([7, 10, 9]))
+            pyxel.rect(x-6, y-3, 13, 7, 0); pyxel.rect(x-5, y-4, 11, 7, c); pyxel.rect(x-2, y-7, 5, 4, 1)
 
     def draw_enemy_car(self, x, y):
         pyxel.rect(x-5, y-4, 11, 7, 12); pyxel.rect(x-2, y-7, 5, 4, 1)
