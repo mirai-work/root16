@@ -9,7 +9,6 @@ STATE_TITLE, STATE_PLAY, STATE_CLEAR, STATE_GAMEOVER, STATE_ENDING, STATE_TUTORI
 
 # --- 迷路データ (八方ふさがりにならないよう通路を確保) ---
 MAZE_DATA = {
-    # 0が通路、1が壁。外周や中央が孤立しないよう「1」の配置を微調整
     1: [[1,1,0,0,0,0,1,1],[1,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,1],[1,1,0,0,0,0,1,1]],
     2: [[1,1,0,0,0,0,1,1],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[1,1,0,0,0,0,1,1]],
     3: [[0,0,0,1,1,0,0,0],[0,1,0,0,0,0,1,0],[0,0,0,0,0,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,0,0,0,0,0],[0,1,0,0,0,0,1,0],[0,0,0,1,1,0,0,0]],
@@ -59,6 +58,7 @@ class App:
         return dx, dy, turbo
 
     def is_confirm_pressed(self):
+        # 判定順序を整理し、ボタン入力漏れを防ぐ
         return (pyxel.btnp(pyxel.KEY_SPACE) or 
                 pyxel.btnp(pyxel.KEY_RETURN) or 
                 pyxel.btnp(pyxel.KEY_Z) or 
@@ -96,8 +96,7 @@ class App:
         pyxel.play(0, [0, 1], loop=True)
 
     def update(self):
-        if not pyxel.btn(pyxel.MOUSE_BUTTON_LEFT) and not pyxel.btn(pyxel.KEY_SPACE) and not pyxel.btn(pyxel.KEY_RETURN): 
-            self.input_lock = False
+        # 修正：キーボード入力が効くよう入力を常に監視する
         if self.state == STATE_TITLE:
             if self.is_confirm_pressed():
                 if not self.ready_to_start: self.ready_to_start = True
@@ -120,6 +119,10 @@ class App:
         elif self.state == STATE_GAMEOVER:
             if self.is_confirm_pressed():
                 self.state = STATE_TITLE; self.input_lock = True
+
+        # キーを離したらロック解除
+        if not pyxel.btn(pyxel.MOUSE_BUTTON_LEFT) and not pyxel.btn(pyxel.KEY_SPACE) and not pyxel.btn(pyxel.KEY_RETURN): 
+            self.input_lock = False
 
     def update_play(self):
         self.total_time += 1; dx_val, dy_val, turbo = self.check_input()
@@ -159,7 +162,7 @@ class App:
             pyxel.blt(0, 0, 0, 0, 0, 128, 128)
             self.draw_text_border(30, 40, "ROUTE 16 ULTIMATE", 7)
             self.draw_text_border(40, 55, "(C)M.Takahashi", 6)
-            txt = "TAP OR SPACE TO START" if not self.ready_to_start else "  PUSH AGAIN TO GO!"
+            txt = "TAP OR SPACE TO START" if not self.ready_to_start else " PUSH AGAIN TO GO!"
             self.draw_text_border(22, 100, txt, 10 if not self.ready_to_start else 14)
         elif self.state == STATE_TUTORIAL: self.draw_tutorial()
         elif self.state == STATE_PLAY:
