@@ -11,7 +11,7 @@ STATE_TITLE, STATE_PLAY, STATE_CLEAR, STATE_GAMEOVER, STATE_ENDING, STATE_TUTORI
 MAZE_DATA = {
     1: [[1,1,0,0,0,0,1,1],[1,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,1],[1,1,0,0,0,0,1,1]],
     2: [[1,1,0,0,0,0,1,1],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[1,1,0,0,0,0,1,1]],
-    3: [[0,0,0,1,1,0,0,0],[0,1,0,0,0,0,1,0],[0,0,0,0,0,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,0,0,0,0,0],[0,1,0,0,0,0,1,0],[0,0,0,1,1,0,0,0]],
+    3: [[0,0,0,1,1,0,0,0],[0,1,0,0,0,0,1,0],[0,0,0,0,0,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,0,0,0,0,0],[0,1,0,0,0,0,1,0],[0,0,1,1,1,1,0,0]],
     4: [[1,0,0,0,0,0,0,1],[0,0,1,1,1,1,0,0],[0,1,0,0,0,0,1,0],[0,0,0,1,1,0,0,0],[0,0,0,1,1,0,0,0],[0,1,0,0,0,0,1,0],[0,0,1,1,1,1,0,0],[1,0,0,0,0,0,0,1]],
     5: [[0,0,0,0,0,0,0,0],[0,1,0,1,0,1,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,1,0,1,0,1,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]]
 }
@@ -82,6 +82,7 @@ class App:
     def init_stage(self):
         self.px, self.py = self.find_safe_pos(0, 0); self.fuel, self.power_timer = 100.0, 0
         self.trails, self.popups, self.items = [], [], []
+        # ステージ初期化時に全てのアイテムを確実にリストへ追加
         for rx in range(4):
             for ry in range(4):
                 x, y = self.find_safe_pos(rx, ry); self.items.append({"x": x, "y": y, "t": "G"})
@@ -154,8 +155,9 @@ class App:
                 if self.power_timer > 0:
                     e["active"] = False; self.score += 500; self.popups.append({"x": e["x"], "y": e["y"], "txt": "DEFEAT!", "c": 10, "l": 20}); pyxel.play(2, 2)
                 else: self.handle_miss()
+        # アイテム取得判定
         for it in self.items[:]:
-            if abs(self.px - it["x"]) < 8 and abs(self.py - it["y"]) < 8:
+            if abs(self.px - it["x"]) < 6 and abs(self.py - it["y"]) < 6:
                 if it["t"] == "G": self.score += 100; self.popups.append({"x": it["x"], "y": it["y"], "txt": "+100", "c": 10, "l": 20}); pyxel.play(2, 2)
                 elif it["t"] == "F": self.fuel = min(100, self.fuel + 40); self.popups.append({"x": it["x"], "y": it["y"], "txt": "GAS UP", "c": 11, "l": 20}); pyxel.play(2, 4)
                 elif it["t"] == "P": self.power_timer = 240; self.popups.append({"x": it["x"], "y": it["y"], "txt": "POWER!", "c": 12, "l": 20}); pyxel.play(2, 4)
@@ -163,7 +165,9 @@ class App:
         for p in self.popups[:]:
             p["y"] -= 0.5; p["l"] -= 1
             if p["l"] <= 0: self.popups.remove(p)
-        if len([i for i in self.items if i["t"] == "G"]) == 0: pyxel.stop(); pyxel.play(2, 4); self.state = STATE_CLEAR; self.input_lock = True
+        # 修正箇所: 常に全アイテムリストをチェックし、ドル("G")が0ならクリア
+        remaining_gold = [i for i in self.items if i["t"] == "G"]
+        if len(remaining_gold) == 0: pyxel.stop(); pyxel.play(2, 4); self.state = STATE_CLEAR; self.input_lock = True
 
     def draw(self):
         pyxel.cls(0)
