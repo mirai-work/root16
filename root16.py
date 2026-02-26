@@ -157,7 +157,7 @@ class App:
             pyxel.blt(0, 0, 0, 0, 0, 128, 128)
             self.draw_text_border(30, 40, "ROUTE 16 ULTIMATE", 7)
             self.draw_text_border(40, 55, "(C)M.Takahashi", 6)
-            txt = "PUSH SPACE TO PREPARE" if not self.ready_to_start else "PUSH AGAIN TO GO!"
+            txt = "TAP OR SPACE TO START" if not self.ready_to_start else "PUSH AGAIN TO GO!"
             self.draw_text_border(22, 100, txt, 10 if not self.ready_to_start else 14)
         elif self.state == STATE_TUTORIAL: self.draw_tutorial()
         elif self.state == STATE_PLAY:
@@ -171,7 +171,7 @@ class App:
             self.draw_text_border(30, 30, "MISSION COMPLETE!", pyxel.frame_count % 16)
             self.draw_text_border(30, 60, f"TOTAL SCORE: {self.score}", 10)
             self.draw_text_border(30, 75, f"TOTAL TIME: {self.total_time // 30}s", 7)
-            if self.ending_timer > 60: self.draw_text_border(30, 110, "PUSH SPACE TO TITLE", 6)
+            if self.ending_timer > 60: self.draw_text_border(30, 110, "TAP OR SPACE TO START", 6)
         elif self.state == STATE_GAMEOVER: self.draw_text_border(45, 60, "GAME OVER", 8)
 
     def draw_tutorial(self):
@@ -188,7 +188,7 @@ class App:
         pyxel.rectb(18, 102, 10, 10, 7); pyxel.text(21, 104, "L", 7)
         pyxel.rectb(42, 102, 10, 10, 7); pyxel.text(45, 104, "R", 7)
         pyxel.circb(95, 107, 10, 10); pyxel.text(85, 105, "TURBO", 10)
-        self.draw_text_border(22, 134, "PUSH TOUCH　SPACE START", pyxel.frame_count % 16)
+        self.draw_text_border(22, 134, "TAP OR SPACE TO START", pyxel.frame_count % 16)
 
     def draw_player_car(self, x, y, is_radar=False):
         if self.power_timer > 0: c = [7, 10, 12, 14][(pyxel.frame_count // 2) % 4]
