@@ -159,7 +159,7 @@ class App:
             pyxel.blt(0, 0, 0, 0, 0, 128, 128)
             self.draw_text_border(30, 40, "ROUTE 16 ULTIMATE", 7)
             self.draw_text_border(40, 55, "(C)M.Takahashi", 6)
-            txt = "TAP OR SPACE TO START" if not self.ready_to_start else "PUSH AGAIN TO GO!"
+            txt = "TAP OR SPACE TO START" if not self.ready_to_start else "  PUSH AGAIN TO GO!"
             self.draw_text_border(22, 100, txt, 10 if not self.ready_to_start else 14)
         elif self.state == STATE_TUTORIAL: self.draw_tutorial()
         elif self.state == STATE_PLAY:
