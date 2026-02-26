@@ -58,10 +58,11 @@ class App:
         return dx, dy, turbo
 
     def is_confirm_pressed(self):
-        # スペースキー不具合修正済み
+        # 修正箇所: エラーの原因だった KEY_ENTER を削除
         return (pyxel.btnp(pyxel.KEY_SPACE) or 
                 pyxel.btnp(pyxel.KEY_RETURN) or 
                 pyxel.btnp(pyxel.KEY_Z) or 
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A) or
                 pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B) or 
                 (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT) and pyxel.mouse_y < 144))
 
@@ -95,29 +96,44 @@ class App:
         pyxel.play(0, [0, 1], loop=True)
 
     def update(self):
-        if not pyxel.btn(pyxel.MOUSE_BUTTON_LEFT): self.input_lock = False
+        # 毎フレーム、入力がない時にロックを外す
+        if not pyxel.btn(pyxel.MOUSE_BUTTON_LEFT) and not pyxel.btn(pyxel.KEY_SPACE) and not pyxel.btn(pyxel.KEY_RETURN): 
+            self.input_lock = False
+            
         if self.state == STATE_TITLE:
-            if self.is_confirm_pressed() and not self.input_lock:
-                if not self.ready_to_start: self.ready_to_start = True
-                else: self.state = STATE_TUTORIAL; self.ready_to_start = False
+            if self.is_confirm_pressed():
+                if not self.ready_to_start: 
+                    self.ready_to_start = True
+                else: 
+                    self.state = STATE_TUTORIAL
+                    self.ready_to_start = False
                 self.input_lock = True
         elif self.state == STATE_TUTORIAL:
-            if self.is_confirm_pressed() and not self.input_lock:
+            if self.is_confirm_pressed():
                 self.score, self.stage, self.total_time = 0, 1, 0
-                self.init_stage(); self.state = STATE_PLAY; self.input_lock = True
+                self.init_stage()
+                self.state = STATE_PLAY
+                self.input_lock = True
         elif self.state == STATE_PLAY: self.update_play()
         elif self.state == STATE_CLEAR:
-            if self.is_confirm_pressed() and not self.input_lock:
-                if self.stage >= 5: self.state = STATE_ENDING; self.ending_timer = 0
-                else: self.stage += 1; self.init_stage(); self.state = STATE_PLAY
+            if self.is_confirm_pressed():
+                if self.stage >= 5: 
+                    self.state = STATE_ENDING
+                    self.ending_timer = 0
+                else: 
+                    self.stage += 1
+                    self.init_stage()
+                    self.state = STATE_PLAY
                 self.input_lock = True
         elif self.state == STATE_ENDING:
             self.ending_timer += 1
-            if self.ending_timer > 60 and self.is_confirm_pressed() and not self.input_lock:
-                self.state = STATE_TITLE; self.input_lock = True
+            if self.ending_timer > 60 and self.is_confirm_pressed():
+                self.state = STATE_TITLE
+                self.input_lock = True
         elif self.state == STATE_GAMEOVER:
-            if self.is_confirm_pressed() and not self.input_lock:
-                self.state = STATE_TITLE; self.input_lock = True
+            if self.is_confirm_pressed():
+                self.state = STATE_TITLE
+                self.input_lock = True
 
     def update_play(self):
         self.total_time += 1; dx_val, dy_val, turbo = self.check_input()
@@ -140,7 +156,7 @@ class App:
                     e["active"] = False; self.score += 500; self.popups.append({"x": e["x"], "y": e["y"], "txt": "DEFEAT!", "c": 10, "l": 20}); pyxel.play(2, 2)
                 else: pyxel.stop(); pyxel.play(3, 3); self.state = STATE_GAMEOVER; self.input_lock = True
         for it in self.items[:]:
-            # アイテム判定のバグ修正済み
+            # 4面対策のアイテム判定緩和(7px)
             if abs(self.px - it["x"]) < 7 and abs(self.py - it["y"]) < 7:
                 if it["t"] == "G": self.score += 100; self.popups.append({"x": it["x"], "y": it["y"], "txt": "+100", "c": 10, "l": 20}); pyxel.play(2, 2)
                 elif it["t"] == "F": self.fuel = min(100, self.fuel + 40); self.popups.append({"x": it["x"], "y": it["y"], "txt": "GAS UP", "c": 11, "l": 20}); pyxel.play(2, 4)
@@ -201,14 +217,14 @@ class App:
                 for _ in range(3): pyxel.pset(x + random.randint(-10, -5), y + random.randint(-3, 3), random.choice([7, 10, 9]))
             # 車体
             pyxel.rect(x-6, y-3, 13, 7, 0); pyxel.rect(x-5, y-4, 11, 7, c); pyxel.rect(x-2, y-7, 5, 4, 1)
-            # タイヤ（足）描写復活
+            # タイヤ(足)描写
             pyxel.rect(x-5, y+2, 2, 2, 0); pyxel.rect(x+4, y+2, 2, 2, 0)
             pyxel.rect(x-5, y-5, 2, 2, 0); pyxel.rect(x+4, y-5, 2, 2, 0)
 
     def draw_enemy_car(self, x, y):
         # 車体
         pyxel.rect(x-5, y-4, 11, 7, 12); pyxel.rect(x-2, y-7, 5, 4, 1)
-        # タイヤ（足）描写復活
+        # タイヤ(足)描写
         pyxel.rect(x-5, y+2, 2, 2, 0); pyxel.rect(x+4, y+2, 2, 2, 0)
         pyxel.rect(x-5, y-5, 2, 2, 0); pyxel.rect(x+4, y-5, 2, 2, 0)
         lamp = 8 if (pyxel.frame_count // 4) % 2 else 12
