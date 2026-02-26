@@ -43,18 +43,29 @@ class App:
 
     def check_input(self):
         dx, dy = 0, 0
+        # キーボード・ゲームパッド判定
         if pyxel.btn(pyxel.KEY_UP) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_UP): dy = -1
         elif pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN): dy = 1
         if pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT): dx = -1
         elif pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT): dx = 1
+        
         mx, my = pyxel.mouse_x, pyxel.mouse_y
-        if pyxel.btn(pyxel.MOUSE_BUTTON_LEFT) and my > 144:
+        is_mouse_down = pyxel.btn(pyxel.MOUSE_BUTTON_LEFT)
+        
+        # モバイル（タップ）用V-PAD判定：方向とターボを独立してチェック
+        if is_mouse_down and my > 144:
+            # 方向判定
             if 20 <= mx <= 40 and 145 <= my <= 165: dy = -1
             if 20 <= mx <= 40 and 175 <= my <= 195: dy = 1
             if 5 <= mx <= 25 and 160 <= my <= 180: dx = -1
             if 35 <= mx <= 55 and 160 <= my <= 180: dx = 1
-        dist = ((mx - 105)**2 + (my - 170)**2)**0.5
-        turbo = pyxel.btn(pyxel.KEY_LSHIFT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_A) or (pyxel.btn(pyxel.MOUSE_BUTTON_LEFT) and dist < 16)
+        
+        # ターボ判定（全ボタン共通）
+        dist_to_turbo = ((mx - 105)**2 + (my - 170)**2)**0.5
+        turbo = (pyxel.btn(pyxel.KEY_LSHIFT) or 
+                 pyxel.btn(pyxel.GAMEPAD1_BUTTON_A) or 
+                 (is_mouse_down and dist_to_turbo < 15)) # 判定半径を微調整
+        
         self.is_turbo_active = turbo 
         return dx, dy, turbo
 
@@ -187,7 +198,7 @@ class App:
             self.draw_text_border(30, offset, "(C)M.TAKAHASHI", 10)
             self.draw_text_border(20, offset + 30, "THANKS YOUR PLAYING!", 7)
             self.draw_text_border(35, offset + 60, "SEE YOU AGAIN", 14)
-            self.draw_text_border(45, offset + 120, "NEXT TIME", 8)
+            self.draw_text_border(45, offset + 120, "GAME OVER", 8)
         elif self.state == STATE_GAMEOVER: self.draw_text_border(45, 60, "GAME OVER", 8)
 
     def draw_heart(self, x, y):
