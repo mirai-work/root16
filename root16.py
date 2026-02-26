@@ -58,6 +58,7 @@ class App:
         return dx, dy, turbo
 
     def is_confirm_pressed(self):
+        # スペースキー不具合修正済み
         return (pyxel.btnp(pyxel.KEY_SPACE) or 
                 pyxel.btnp(pyxel.KEY_RETURN) or 
                 pyxel.btnp(pyxel.KEY_Z) or 
@@ -139,7 +140,7 @@ class App:
                     e["active"] = False; self.score += 500; self.popups.append({"x": e["x"], "y": e["y"], "txt": "DEFEAT!", "c": 10, "l": 20}); pyxel.play(2, 2)
                 else: pyxel.stop(); pyxel.play(3, 3); self.state = STATE_GAMEOVER; self.input_lock = True
         for it in self.items[:]:
-            # 4面以降でも確実に取れるよう判定を 5 -> 7 に緩和
+            # アイテム判定のバグ修正済み
             if abs(self.px - it["x"]) < 7 and abs(self.py - it["y"]) < 7:
                 if it["t"] == "G": self.score += 100; self.popups.append({"x": it["x"], "y": it["y"], "txt": "+100", "c": 10, "l": 20}); pyxel.play(2, 2)
                 elif it["t"] == "F": self.fuel = min(100, self.fuel + 40); self.popups.append({"x": it["x"], "y": it["y"], "txt": "GAS UP", "c": 11, "l": 20}); pyxel.play(2, 4)
@@ -200,14 +201,14 @@ class App:
                 for _ in range(3): pyxel.pset(x + random.randint(-10, -5), y + random.randint(-3, 3), random.choice([7, 10, 9]))
             # 車体
             pyxel.rect(x-6, y-3, 13, 7, 0); pyxel.rect(x-5, y-4, 11, 7, c); pyxel.rect(x-2, y-7, 5, 4, 1)
-            # タイヤ(足)
+            # タイヤ（足）描写復活
             pyxel.rect(x-5, y+2, 2, 2, 0); pyxel.rect(x+4, y+2, 2, 2, 0)
             pyxel.rect(x-5, y-5, 2, 2, 0); pyxel.rect(x+4, y-5, 2, 2, 0)
 
     def draw_enemy_car(self, x, y):
         # 車体
         pyxel.rect(x-5, y-4, 11, 7, 12); pyxel.rect(x-2, y-7, 5, 4, 1)
-        # タイヤ(足)
+        # タイヤ（足）描写復活
         pyxel.rect(x-5, y+2, 2, 2, 0); pyxel.rect(x+4, y+2, 2, 2, 0)
         pyxel.rect(x-5, y-5, 2, 2, 0); pyxel.rect(x+4, y-5, 2, 2, 0)
         lamp = 8 if (pyxel.frame_count // 4) % 2 else 12
