@@ -25,12 +25,13 @@ class App:
             pyxel.image(0).rect(0, 0, 128, 128, 1)
             pyxel.image(0).text(40, 60, "NO IMAGE FOUND", 7)
         self.init_sound()
-        pyxel.mouse(True)
+        # マウスカーソルを非表示に変更
+        pyxel.mouse(False)
         self.state = STATE_TITLE
         self.ready_to_start = False
         self.score, self.stage, self.total_time = 0, 1, 0
-        self.trails, self.popups, self.items = [], [], []
-        self.ending_timer, self.input_lock, self.is_turbo_active = 0, False, False 
+        self.trails, self.popups, self.ending_timer = [], [], 0
+        self.input_lock, self.is_turbo_active = False, False 
         pyxel.run(self.update, self.draw)
 
     def init_sound(self):
@@ -170,16 +171,12 @@ class App:
 
     def draw_tutorial(self):
         self.draw_text_border(42, 6, "HOW TO PLAY", 10)
-        # 操作説明：短縮して横幅を確保
         pyxel.text(5, 20, "PC:ARROW-KEY / SHIFT:TURBO", 7)
         pyxel.text(5, 28, "SP:V-PAD     / TURBO-BTN", 7)
-        # アイテム説明：記号を強調
         pyxel.text(5, 42, "$:GET ALL", 10); pyxel.text(45, 42, "F:FUEL UP", 11); pyxel.text(85, 42, "O:POWER UP", 12)
-        # モード説明：枠を少し狭く
         pyxel.rectb(4, 55, 120, 18, 5)
         pyxel.text(8, 58, "CENTER=ZOOM / EDGE=RADAR-MAP", 6)
         pyxel.text(8, 65, "DONT HIT THE ENEMY CARS!", 8)
-        # スマホVパッド：中央寄せ
         pyxel.text(32, 80, "-- MOBILE PAD --", 6)
         pyxel.rectb(30, 92, 10, 10, 7); pyxel.text(33, 94, "U", 7)
         pyxel.rectb(30, 112, 10, 10, 7); pyxel.text(33, 114, "D", 7)
