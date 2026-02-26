@@ -20,7 +20,6 @@ class App:
     def __init__(self):
         pyxel.init(SCREEN_SIZE, SCREEN_SIZE + 16 + UI_PANEL_HEIGHT, title="ROUTE 16 ULTIMATE")
         try:
-            # 推奨される書き方 (pyxel.images[0]) に変更
             pyxel.images[0].load(0, 0, "sp-tuka-.png")
         except:
             pyxel.images[0].rect(0, 0, 128, 128, 1)
@@ -59,7 +58,6 @@ class App:
         return dx, dy, turbo
 
     def is_confirm_pressed(self):
-        # KEY_ENTER を KEY_RETURN に修正
         return (pyxel.btnp(pyxel.KEY_SPACE) or 
                 pyxel.btnp(pyxel.KEY_RETURN) or 
                 pyxel.btnp(pyxel.KEY_Z) or 
@@ -141,7 +139,8 @@ class App:
                     e["active"] = False; self.score += 500; self.popups.append({"x": e["x"], "y": e["y"], "txt": "DEFEAT!", "c": 10, "l": 20}); pyxel.play(2, 2)
                 else: pyxel.stop(); pyxel.play(3, 3); self.state = STATE_GAMEOVER; self.input_lock = True
         for it in self.items[:]:
-            if abs(self.px - it["x"]) < 5 and abs(self.py - it["y"]) < 5:
+            # 4面以降でも確実に取れるよう判定を 5 -> 7 に緩和
+            if abs(self.px - it["x"]) < 7 and abs(self.py - it["y"]) < 7:
                 if it["t"] == "G": self.score += 100; self.popups.append({"x": it["x"], "y": it["y"], "txt": "+100", "c": 10, "l": 20}); pyxel.play(2, 2)
                 elif it["t"] == "F": self.fuel = min(100, self.fuel + 40); self.popups.append({"x": it["x"], "y": it["y"], "txt": "GAS UP", "c": 11, "l": 20}); pyxel.play(2, 4)
                 elif it["t"] == "P": self.power_timer = 240; self.popups.append({"x": it["x"], "y": it["y"], "txt": "POWER!", "c": 12, "l": 20}); pyxel.play(2, 4)
@@ -199,10 +198,18 @@ class App:
         else:
             if self.is_turbo_active:
                 for _ in range(3): pyxel.pset(x + random.randint(-10, -5), y + random.randint(-3, 3), random.choice([7, 10, 9]))
+            # 車体
             pyxel.rect(x-6, y-3, 13, 7, 0); pyxel.rect(x-5, y-4, 11, 7, c); pyxel.rect(x-2, y-7, 5, 4, 1)
+            # タイヤ(足)
+            pyxel.rect(x-5, y+2, 2, 2, 0); pyxel.rect(x+4, y+2, 2, 2, 0)
+            pyxel.rect(x-5, y-5, 2, 2, 0); pyxel.rect(x+4, y-5, 2, 2, 0)
 
     def draw_enemy_car(self, x, y):
+        # 車体
         pyxel.rect(x-5, y-4, 11, 7, 12); pyxel.rect(x-2, y-7, 5, 4, 1)
+        # タイヤ(足)
+        pyxel.rect(x-5, y+2, 2, 2, 0); pyxel.rect(x+4, y+2, 2, 2, 0)
+        pyxel.rect(x-5, y-5, 2, 2, 0); pyxel.rect(x+4, y-5, 2, 2, 0)
         lamp = 8 if (pyxel.frame_count // 4) % 2 else 12
         pyxel.pset(x-1, y-8, lamp)
 
