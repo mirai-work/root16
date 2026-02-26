@@ -20,12 +20,12 @@ class App:
     def __init__(self):
         pyxel.init(SCREEN_SIZE, SCREEN_SIZE + 16 + UI_PANEL_HEIGHT, title="ROUTE 16 ULTIMATE")
         try:
-            pyxel.image(0).load(0, 0, "sp-tuka-.png")
+            # 推奨される書き方 (pyxel.images[0]) に変更
+            pyxel.images[0].load(0, 0, "sp-tuka-.png")
         except:
-            pyxel.image(0).rect(0, 0, 128, 128, 1)
-            pyxel.image(0).text(40, 60, "NO IMAGE FOUND", 7)
+            pyxel.images[0].rect(0, 0, 128, 128, 1)
+            pyxel.images[0].text(40, 60, "NO IMAGE FOUND", 7)
         self.init_sound()
-        # マウスカーソルを非表示に変更
         pyxel.mouse(False)
         self.state = STATE_TITLE
         self.ready_to_start = False
@@ -59,7 +59,12 @@ class App:
         return dx, dy, turbo
 
     def is_confirm_pressed(self):
-        return pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B) or (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT) and pyxel.mouse_y < 144)
+        # KEY_ENTER を KEY_RETURN に修正
+        return (pyxel.btnp(pyxel.KEY_SPACE) or 
+                pyxel.btnp(pyxel.KEY_RETURN) or 
+                pyxel.btnp(pyxel.KEY_Z) or 
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B) or 
+                (pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT) and pyxel.mouse_y < 144))
 
     def get_current_maze(self): return MAZE_DATA[min(self.stage, 5)]
     def get_wall(self, x, y):
@@ -152,8 +157,8 @@ class App:
             pyxel.blt(0, 0, 0, 0, 0, 128, 128)
             self.draw_text_border(30, 40, "ROUTE 16 ULTIMATE", 7)
             self.draw_text_border(40, 55, "(C)M.Takahashi", 6)
-            txt = "PUSH TO PREPARE" if not self.ready_to_start else "PUSH AGAIN TO GO!"
-            self.draw_text_border(28, 100, txt, 10 if not self.ready_to_start else 14)
+            txt = "PUSH SPACE TO PREPARE" if not self.ready_to_start else "PUSH AGAIN TO GO!"
+            self.draw_text_border(22, 100, txt, 10 if not self.ready_to_start else 14)
         elif self.state == STATE_TUTORIAL: self.draw_tutorial()
         elif self.state == STATE_PLAY:
             lx, ly = self.px % 64, self.py % 64
@@ -166,7 +171,7 @@ class App:
             self.draw_text_border(30, 30, "MISSION COMPLETE!", pyxel.frame_count % 16)
             self.draw_text_border(30, 60, f"TOTAL SCORE: {self.score}", 10)
             self.draw_text_border(30, 75, f"TOTAL TIME: {self.total_time // 30}s", 7)
-            if self.ending_timer > 60: self.draw_text_border(30, 110, "PUSH TO TITLE", 6)
+            if self.ending_timer > 60: self.draw_text_border(30, 110, "PUSH SPACE TO TITLE", 6)
         elif self.state == STATE_GAMEOVER: self.draw_text_border(45, 60, "GAME OVER", 8)
 
     def draw_tutorial(self):
@@ -183,7 +188,7 @@ class App:
         pyxel.rectb(18, 102, 10, 10, 7); pyxel.text(21, 104, "L", 7)
         pyxel.rectb(42, 102, 10, 10, 7); pyxel.text(45, 104, "R", 7)
         pyxel.circb(95, 107, 10, 10); pyxel.text(85, 105, "TURBO", 10)
-        self.draw_text_border(22, 134, "PUSH SCREEN TO START", pyxel.frame_count % 16)
+        self.draw_text_border(22, 134, "PUSH TOUCH　SPACE START", pyxel.frame_count % 16)
 
     def draw_player_car(self, x, y, is_radar=False):
         if self.power_timer > 0: c = [7, 10, 12, 14][(pyxel.frame_count // 2) % 4]
