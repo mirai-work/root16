@@ -82,7 +82,6 @@ class App:
     def init_stage(self):
         self.px, self.py = self.find_safe_pos(0, 0); self.fuel, self.power_timer = 100.0, 0
         self.trails, self.popups, self.items = [], [], []
-        # ステージ初期化時に全てのアイテムを確実にリストへ追加
         for rx in range(4):
             for ry in range(4):
                 x, y = self.find_safe_pos(rx, ry); self.items.append({"x": x, "y": y, "t": "G"})
@@ -125,7 +124,7 @@ class App:
                 self.input_lock = True
         elif self.state == STATE_ENDING:
             self.ending_timer += 1
-            if self.ending_timer > 60 and self.is_confirm_pressed():
+            if self.ending_timer > 300 and self.is_confirm_pressed():
                 self.state = STATE_TITLE; self.input_lock = True
         elif self.state == STATE_GAMEOVER:
             if self.is_confirm_pressed():
@@ -155,7 +154,6 @@ class App:
                 if self.power_timer > 0:
                     e["active"] = False; self.score += 500; self.popups.append({"x": e["x"], "y": e["y"], "txt": "DEFEAT!", "c": 10, "l": 20}); pyxel.play(2, 2)
                 else: self.handle_miss()
-        # アイテム取得判定
         for it in self.items[:]:
             if abs(self.px - it["x"]) < 6 and abs(self.py - it["y"]) < 6:
                 if it["t"] == "G": self.score += 100; self.popups.append({"x": it["x"], "y": it["y"], "txt": "+100", "c": 10, "l": 20}); pyxel.play(2, 2)
@@ -165,7 +163,6 @@ class App:
         for p in self.popups[:]:
             p["y"] -= 0.5; p["l"] -= 1
             if p["l"] <= 0: self.popups.remove(p)
-        # 修正箇所: 常に全アイテムリストをチェックし、ドル("G")が0ならクリア
         remaining_gold = [i for i in self.items if i["t"] == "G"]
         if len(remaining_gold) == 0: pyxel.stop(); pyxel.play(2, 4); self.state = STATE_CLEAR; self.input_lock = True
 
@@ -185,21 +182,22 @@ class App:
             self.draw_ui(); self.draw_vpad()
         elif self.state == STATE_CLEAR: self.draw_text_border(30, 50, f"STAGE {self.stage} CLEAR!", 10)
         elif self.state == STATE_ENDING:
-            pyxel.blt(0, 0, 0, 0, 0, 128, 128)
-            self.draw_text_border(30, 30, "MISSION COMPLETE!", pyxel.frame_count % 16)
-            self.draw_text_border(30, 60, f"TOTAL SCORE: {self.score}", 10)
-            self.draw_text_border(30, 75, f"TOTAL TIME: {self.total_time // 30}s", 7)
-            if self.ending_timer > 60: self.draw_text_border(30, 110, "TAP OR SPACE TO START", 6)
+            pyxel.cls(0)
+            offset = 140 - (self.ending_timer * 0.5)
+            self.draw_text_border(30, offset, "(C)M.TAKAHASHI", 10)
+            self.draw_text_border(20, offset + 30, "THANKS YOUR PLAYING!", 7)
+            self.draw_text_border(35, offset + 60, "SEE YOU AGAIN", 14)
+            self.draw_text_border(45, offset + 120, "NEXT TIME", 8)
         elif self.state == STATE_GAMEOVER: self.draw_text_border(45, 60, "GAME OVER", 8)
 
     def draw_heart(self, x, y):
-        col = 8 # 赤色に固定
+        col = 8
         pyxel.rect(x-2, y-1, 5, 2, col)
         pyxel.rect(x-3, y, 7, 2, col)
         pyxel.rect(x-2, y+2, 5, 1, col)
         pyxel.rect(x-1, y+3, 3, 1, col)
         pyxel.pset(x, y+4, col)
-        pyxel.pset(x, y, 0) # 頂点の凹み
+        pyxel.pset(x, y, 0)
 
     def draw_tutorial(self):
         self.draw_text_border(42, 6, "HOW TO PLAY", 10)
