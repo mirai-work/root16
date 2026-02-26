@@ -46,19 +46,20 @@ class App:
         elif pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN): dy = 1
         if pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT): dx = -1
         elif pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT): dx = 1
+        
         mx, my = pyxel.mouse_x, pyxel.mouse_y
         if pyxel.btn(pyxel.MOUSE_BUTTON_LEFT) and my > 144:
             if 20 <= mx <= 40 and 145 <= my <= 165: dy = -1
             if 20 <= mx <= 40 and 175 <= my <= 195: dy = 1
             if 5 <= mx <= 25 and 160 <= my <= 180: dx = -1
             if 35 <= mx <= 55 and 160 <= my <= 180: dx = 1
+            
         dist = ((mx - 105)**2 + (my - 170)**2)**0.5
         turbo = pyxel.btn(pyxel.KEY_LSHIFT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_A) or (pyxel.btn(pyxel.MOUSE_BUTTON_LEFT) and dist < 16)
         self.is_turbo_active = turbo 
         return dx, dy, turbo
 
     def is_confirm_pressed(self):
-        # 修正箇所: エラーの原因だった KEY_ENTER を削除
         return (pyxel.btnp(pyxel.KEY_SPACE) or 
                 pyxel.btnp(pyxel.KEY_RETURN) or 
                 pyxel.btnp(pyxel.KEY_Z) or 
@@ -96,54 +97,48 @@ class App:
         pyxel.play(0, [0, 1], loop=True)
 
     def update(self):
-        # 毎フレーム、入力がない時にロックを外す
+        # ロック解除条件の修正
         if not pyxel.btn(pyxel.MOUSE_BUTTON_LEFT) and not pyxel.btn(pyxel.KEY_SPACE) and not pyxel.btn(pyxel.KEY_RETURN): 
             self.input_lock = False
             
         if self.state == STATE_TITLE:
             if self.is_confirm_pressed():
-                if not self.ready_to_start: 
-                    self.ready_to_start = True
-                else: 
-                    self.state = STATE_TUTORIAL
-                    self.ready_to_start = False
+                if not self.ready_to_start: self.ready_to_start = True
+                else: self.state = STATE_TUTORIAL; self.ready_to_start = False
                 self.input_lock = True
         elif self.state == STATE_TUTORIAL:
             if self.is_confirm_pressed():
                 self.score, self.stage, self.total_time = 0, 1, 0
-                self.init_stage()
-                self.state = STATE_PLAY
-                self.input_lock = True
+                self.init_stage(); self.state = STATE_PLAY; self.input_lock = True
         elif self.state == STATE_PLAY: self.update_play()
         elif self.state == STATE_CLEAR:
             if self.is_confirm_pressed():
-                if self.stage >= 5: 
-                    self.state = STATE_ENDING
-                    self.ending_timer = 0
-                else: 
-                    self.stage += 1
-                    self.init_stage()
-                    self.state = STATE_PLAY
+                if self.stage >= 5: self.state = STATE_ENDING; self.ending_timer = 0
+                else: self.stage += 1; self.init_stage(); self.state = STATE_PLAY
                 self.input_lock = True
         elif self.state == STATE_ENDING:
             self.ending_timer += 1
             if self.ending_timer > 60 and self.is_confirm_pressed():
-                self.state = STATE_TITLE
-                self.input_lock = True
-        elif self.state == STATE_GAMEOVER:
+                self.state = STATE_TITLE; self.input_lock = True
+        elif self.state == GAMEOVER := STATE_GAMEOVER: # 書き方微調整
             if self.is_confirm_pressed():
-                self.state = STATE_TITLE
-                self.input_lock = True
+                self.state = STATE_TITLE; self.input_lock = True
 
     def update_play(self):
         self.total_time += 1; dx_val, dy_val, turbo = self.check_input()
-        if self.input_lock: dx_val, dy_val, turbo = 0, 0, False
+        
+        # 進行方向のみロック対象にし、ターボ判定はロックから除外（これで反応します）
+        move_dx = 0 if self.input_lock else dx_val
+        move_dy = 0 if self.input_lock else dy_val
+        
         self.fuel -= 0.18 if turbo else 0.08
         if self.fuel <= 0: pyxel.stop(); pyxel.play(3, 3); self.state = STATE_GAMEOVER; self.input_lock = True
         if self.power_timer > 0: self.power_timer -= 1
+        
         mv = (2.4 if turbo else 1.6) if self.stage == 2 else (2.1 if turbo else 1.3)
-        if not self.get_wall(self.px + dx_val * mv, self.py): self.px += dx_val * mv
-        if not self.get_wall(self.px, self.py + dy_val * mv): self.py += dy_val * mv
+        if not self.get_wall(self.px + move_dx * mv, self.py): self.px += move_dx * mv
+        if not self.get_wall(self.px, self.py + move_dy * mv): self.py += move_dy * mv
+        
         for e in self.enemies:
             if not e["active"]: continue
             if e["dx"] == 0 and e["dy"] == 0 or random.random() < 0.05:
@@ -155,13 +150,14 @@ class App:
                 if self.power_timer > 0:
                     e["active"] = False; self.score += 500; self.popups.append({"x": e["x"], "y": e["y"], "txt": "DEFEAT!", "c": 10, "l": 20}); pyxel.play(2, 2)
                 else: pyxel.stop(); pyxel.play(3, 3); self.state = STATE_GAMEOVER; self.input_lock = True
+        
         for it in self.items[:]:
-            # 4面対策のアイテム判定緩和(7px)
             if abs(self.px - it["x"]) < 7 and abs(self.py - it["y"]) < 7:
                 if it["t"] == "G": self.score += 100; self.popups.append({"x": it["x"], "y": it["y"], "txt": "+100", "c": 10, "l": 20}); pyxel.play(2, 2)
                 elif it["t"] == "F": self.fuel = min(100, self.fuel + 40); self.popups.append({"x": it["x"], "y": it["y"], "txt": "GAS UP", "c": 11, "l": 20}); pyxel.play(2, 4)
                 elif it["t"] == "P": self.power_timer = 240; self.popups.append({"x": it["x"], "y": it["y"], "txt": "POWER!", "c": 12, "l": 20}); pyxel.play(2, 4)
                 self.items.remove(it)
+        
         for p in self.popups[:]:
             p["y"] -= 0.5; p["l"] -= 1
             if p["l"] <= 0: self.popups.remove(p)
@@ -215,16 +211,12 @@ class App:
         else:
             if self.is_turbo_active:
                 for _ in range(3): pyxel.pset(x + random.randint(-10, -5), y + random.randint(-3, 3), random.choice([7, 10, 9]))
-            # 車体
             pyxel.rect(x-6, y-3, 13, 7, 0); pyxel.rect(x-5, y-4, 11, 7, c); pyxel.rect(x-2, y-7, 5, 4, 1)
-            # タイヤ(足)描写
             pyxel.rect(x-5, y+2, 2, 2, 0); pyxel.rect(x+4, y+2, 2, 2, 0)
             pyxel.rect(x-5, y-5, 2, 2, 0); pyxel.rect(x+4, y-5, 2, 2, 0)
 
     def draw_enemy_car(self, x, y):
-        # 車体
         pyxel.rect(x-5, y-4, 11, 7, 12); pyxel.rect(x-2, y-7, 5, 4, 1)
-        # タイヤ(足)描写
         pyxel.rect(x-5, y+2, 2, 2, 0); pyxel.rect(x+4, y+2, 2, 2, 0)
         pyxel.rect(x-5, y-5, 2, 2, 0); pyxel.rect(x+4, y-5, 2, 2, 0)
         lamp = 8 if (pyxel.frame_count // 4) % 2 else 12
