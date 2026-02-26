@@ -7,13 +7,14 @@ UI_PANEL_HEIGHT = 48
 WORLD_SIZE = 256
 STATE_TITLE, STATE_PLAY, STATE_CLEAR, STATE_GAMEOVER, STATE_ENDING, STATE_TUTORIAL = range(6)
 
-# --- 迷路データ ---
+# --- 迷路データ (八方ふさがりにならないよう通路を確保) ---
 MAZE_DATA = {
-    1: [[1,1,0,0,0,0,1,1],[1,0,0,0,0,0,0,1],[0,0,0,1,1,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,1,1,0,0,0],[1,0,0,0,0,0,0,1],[1,1,0,0,0,0,1,1]],
-    2: [[1,1,0,0,0,0,1,1],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[1,0,0,1,1,0,0,1],[1,0,0,1,1,0,0,1],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[1,1,0,0,0,0,1,1]],
-    3: [[0,0,0,1,1,0,0,0],[0,1,0,0,0,0,1,0],[0,0,0,0,0,0,0,0],[1,0,0,1,1,0,0,1],[1,0,0,1,1,0,0,1],[0,0,0,0,0,0,0,0],[0,1,0,0,0,0,1,0],[0,0,0,1,1,0,0,0]],
-    4: [[1,0,0,0,0,0,0,1],[0,0,1,1,1,1,0,0],[0,1,0,0,0,0,1,0],[0,1,0,1,1,0,1,0],[0,1,0,1,1,0,1,0],[0,1,0,0,0,0,1,0],[0,0,1,1,1,1,0,0],[1,0,0,0,0,0,0,1]],
-    5: [[0,0,0,0,0,0,0,0],[0,1,0,1,0,1,0,0],[0,0,0,0,0,0,0,0],[0,1,0,1,0,1,0,0],[0,0,0,0,0,0,0,0],[0,1,0,1,0,1,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]]
+    # 0が通路、1が壁。外周や中央が孤立しないよう「1」の配置を微調整
+    1: [[1,1,0,0,0,0,1,1],[1,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,1],[1,1,0,0,0,0,1,1]],
+    2: [[1,1,0,0,0,0,1,1],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[1,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[1,1,0,0,0,0,1,1]],
+    3: [[0,0,0,1,1,0,0,0],[0,1,0,0,0,0,1,0],[0,0,0,0,0,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,1,1,0,0,0],[0,0,0,0,0,0,0,0],[0,1,0,0,0,0,1,0],[0,0,0,1,1,0,0,0]],
+    4: [[1,0,0,0,0,0,0,1],[0,0,1,1,1,1,0,0],[0,1,0,0,0,0,1,0],[0,0,0,1,1,0,0,0],[0,0,0,1,1,0,0,0],[0,1,0,0,0,0,1,0],[0,0,1,1,1,1,0,0],[1,0,0,0,0,0,0,1]],
+    5: [[0,0,0,0,0,0,0,0],[0,1,0,1,0,1,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,1,0,1,0,1,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]]
 }
 
 class App:
@@ -46,16 +47,13 @@ class App:
         elif pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN): dy = 1
         if pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT): dx = -1
         elif pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT): dx = 1
-        
         mx, my = pyxel.mouse_x, pyxel.mouse_y
         if pyxel.btn(pyxel.MOUSE_BUTTON_LEFT) and my > 144:
             if 20 <= mx <= 40 and 145 <= my <= 165: dy = -1
             if 20 <= mx <= 40 and 175 <= my <= 195: dy = 1
             if 5 <= mx <= 25 and 160 <= my <= 180: dx = -1
             if 35 <= mx <= 55 and 160 <= my <= 180: dx = 1
-            
         dist = ((mx - 105)**2 + (my - 170)**2)**0.5
-        # ターボ判定を確実にする
         turbo = pyxel.btn(pyxel.KEY_LSHIFT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_A) or (pyxel.btn(pyxel.MOUSE_BUTTON_LEFT) and dist < 16)
         self.is_turbo_active = turbo 
         return dx, dy, turbo
@@ -90,18 +88,16 @@ class App:
                 if (rx + ry) % 3 == 0: xf, yf = self.find_safe_pos(rx, ry); self.items.append({"x": xf, "y": yf, "t": "F"})
                 if (rx == 1 and ry == 2) or (rx == 3 and ry == 0): xp, yp = self.find_safe_pos(rx, ry); self.items.append({"x": xp, "y": yp, "t": "P"})
         self.enemies = []
-        config = {1:(2, 0.5), 2:(2, 0.8), 3:(3, 0.6), 4:(4, 0.7), 5:(6, 0.75)}
-        num, speed = config.get(self.stage, (6, 0.8))
+        config = {1:(2, 0.5), 2:(2, 0.8), 3:(3, 0.6), 4:(4, 0.65), 5:(5, 0.7)}
+        num, speed = config.get(self.stage, (5, 0.7))
         for _ in range(num):
             ex, ey = self.find_safe_pos(random.randint(0,3), random.randint(0,3))
             self.enemies.append({"x": ex, "y": ey, "dx": 0, "dy": 0, "active": True, "speed": speed})
         pyxel.play(0, [0, 1], loop=True)
 
     def update(self):
-        # キーを離した時にロックを解除
         if not pyxel.btn(pyxel.MOUSE_BUTTON_LEFT) and not pyxel.btn(pyxel.KEY_SPACE) and not pyxel.btn(pyxel.KEY_RETURN): 
             self.input_lock = False
-            
         if self.state == STATE_TITLE:
             if self.is_confirm_pressed():
                 if not self.ready_to_start: self.ready_to_start = True
@@ -121,26 +117,20 @@ class App:
             self.ending_timer += 1
             if self.ending_timer > 60 and self.is_confirm_pressed():
                 self.state = STATE_TITLE; self.input_lock = True
-        elif self.state == STATE_GAMEOVER: # 修正：エラーの出ない書き方に変更
+        elif self.state == STATE_GAMEOVER:
             if self.is_confirm_pressed():
                 self.state = STATE_TITLE; self.input_lock = True
 
     def update_play(self):
         self.total_time += 1; dx_val, dy_val, turbo = self.check_input()
-        
-        # 移動のみロックし、ターボ（燃料消費）はロックしない
         move_dx = 0 if self.input_lock else dx_val
         move_dy = 0 if self.input_lock else dy_val
-        
         self.fuel -= 0.18 if turbo else 0.08
         if self.fuel <= 0: pyxel.stop(); pyxel.play(3, 3); self.state = STATE_GAMEOVER; self.input_lock = True
         if self.power_timer > 0: self.power_timer -= 1
-        
-        # ターボ速度の反映
         mv = (2.4 if turbo else 1.6) if self.stage == 2 else (2.1 if turbo else 1.3)
         if not self.get_wall(self.px + move_dx * mv, self.py): self.px += move_dx * mv
         if not self.get_wall(self.px, self.py + move_dy * mv): self.py += move_dy * mv
-        
         for e in self.enemies:
             if not e["active"]: continue
             if e["dx"] == 0 and e["dy"] == 0 or random.random() < 0.05:
@@ -152,14 +142,12 @@ class App:
                 if self.power_timer > 0:
                     e["active"] = False; self.score += 500; self.popups.append({"x": e["x"], "y": e["y"], "txt": "DEFEAT!", "c": 10, "l": 20}); pyxel.play(2, 2)
                 else: pyxel.stop(); pyxel.play(3, 3); self.state = STATE_GAMEOVER; self.input_lock = True
-        
         for it in self.items[:]:
-            if abs(self.px - it["x"]) < 7 and abs(self.py - it["y"]) < 7:
+            if abs(self.px - it["x"]) < 8 and abs(self.py - it["y"]) < 8:
                 if it["t"] == "G": self.score += 100; self.popups.append({"x": it["x"], "y": it["y"], "txt": "+100", "c": 10, "l": 20}); pyxel.play(2, 2)
                 elif it["t"] == "F": self.fuel = min(100, self.fuel + 40); self.popups.append({"x": it["x"], "y": it["y"], "txt": "GAS UP", "c": 11, "l": 20}); pyxel.play(2, 4)
                 elif it["t"] == "P": self.power_timer = 240; self.popups.append({"x": it["x"], "y": it["y"], "txt": "POWER!", "c": 12, "l": 20}); pyxel.play(2, 4)
                 self.items.remove(it)
-        
         for p in self.popups[:]:
             p["y"] -= 0.5; p["l"] -= 1
             if p["l"] <= 0: self.popups.remove(p)
@@ -214,13 +202,11 @@ class App:
             if self.is_turbo_active:
                 for _ in range(3): pyxel.pset(x + random.randint(-10, -5), y + random.randint(-3, 3), random.choice([7, 10, 9]))
             pyxel.rect(x-6, y-3, 13, 7, 0); pyxel.rect(x-5, y-4, 11, 7, c); pyxel.rect(x-2, y-7, 5, 4, 1)
-            # タイヤ(足)
             pyxel.rect(x-5, y+2, 2, 2, 0); pyxel.rect(x+4, y+2, 2, 2, 0)
             pyxel.rect(x-5, y-5, 2, 2, 0); pyxel.rect(x+4, y-5, 2, 2, 0)
 
     def draw_enemy_car(self, x, y):
         pyxel.rect(x-5, y-4, 11, 7, 12); pyxel.rect(x-2, y-7, 5, 4, 1)
-        # タイヤ(足)
         pyxel.rect(x-5, y+2, 2, 2, 0); pyxel.rect(x+4, y+2, 2, 2, 0)
         pyxel.rect(x-5, y-5, 2, 2, 0); pyxel.rect(x+4, y-5, 2, 2, 0)
         lamp = 8 if (pyxel.frame_count // 4) % 2 else 12
